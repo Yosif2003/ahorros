@@ -55,8 +55,6 @@ export const Dashboard: React.FC = () => {
   const totals = transactions.reduce(
     (acc, curr) => {
       if (curr.type === 'expense') {
-        // En lugar de sumar el total, sumamos solo la DEUDA RESTANTE.
-        // Así, cuando abonas, la deuda baja y tu balance disponible sube.
         const remainingDebt = curr.amount - (curr.paidAmount || 0);
         acc.expense += remainingDebt;
       } else {
@@ -75,90 +73,94 @@ export const Dashboard: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <p className="text-slate-500 font-medium animate-pulse">Cargando tu información financiera...</p>
+      <div className="flex items-center justify-center min-h-[60vh] px-4">
+        <p className="text-slate-500 font-medium animate-pulse text-sm">Cargando tu información financiera...</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-8 animate-in fade-in duration-500">
+    <div className="max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-5 sm:space-y-8 animate-in fade-in duration-500">
       
       {/* SECCIÓN SUPERIOR: BALANCE & BOTÓN DE ACCIÓN */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-900 text-white rounded-2xl p-6 shadow-lg">
-        <div>
-          <p className="text-slate-400 text-sm font-medium mb-1">Balance Disponible</p>
-          <h2 className="text-4xl font-bold tracking-tight">${balance.toFixed(2)}</h2>
+      <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 bg-slate-900 text-white rounded-2xl p-4 sm:p-6 shadow-lg">
+        <div className="text-center sm:text-left">
+          <p className="text-slate-400 text-xs sm:text-sm font-medium mb-0.5 sm:mb-1">Balance Disponible</p>
+          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">${balance.toFixed(2)}</h2>
         </div>
+
         <button
           onClick={() => {
             setSelectedTx(null);
             setIsEditing(false);
             setIsCreateModalOpen(true);
           }}
-          className="w-full md:w-auto px-5 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-semibold transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+          className="w-full md:w-auto px-4 py-2.5 sm:px-5 sm:py-3 bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] text-white rounded-xl font-semibold transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer text-sm sm:text-base"
         >
-          <Plus className="h-5 w-5" />
+          <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
           <span>Nuevo Movimiento</span>
         </button>
       </div>
 
-      {/* TARJETAS DE RESUMEN */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* TARJETAS DE RESUMEN (Optimizadas para 3 columnas compactas en móvil) */}
+      <div className="grid grid-cols-3 sm:grid-cols-3 gap-2 sm:gap-4">
+        
+        {/* INGRESOS */}
         <div 
           onClick={() => setHistoryType('income')}
-          className="bg-white border border-slate-100 hover:border-emerald-300 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex items-center gap-4 cursor-pointer group"
+          className="bg-white border border-slate-100 hover:border-emerald-300 rounded-xl sm:rounded-2xl p-2.5 sm:p-5 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row items-center sm:items-center text-center sm:text-left gap-1.5 sm:gap-4 cursor-pointer group"
         >
-          <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl group-hover:scale-110 transition-transform">
-            <TrendingUp className="h-6 w-6" />
+          <div className="p-2 sm:p-3 bg-emerald-50 text-emerald-600 rounded-lg sm:rounded-xl group-hover:scale-110 transition-transform">
+            <TrendingUp className="h-4 w-4 sm:h-6 sm:w-6" />
           </div>
-          <div>
-            <p className="text-slate-500 text-xs font-medium uppercase tracking-wider">Ingresos</p>
-            <p className="text-xl font-bold text-slate-900">${totals.income.toFixed(2)}</p>
+          <div className="min-w-0 w-full">
+            <p className="text-slate-500 text-[10px] sm:text-xs font-medium uppercase tracking-wider truncate">Ingresos</p>
+            <p className="text-xs sm:text-xl font-bold text-slate-900 truncate">${totals.income.toFixed(2)}</p>
           </div>
         </div>
 
+        {/* DEUDA PENDIENTE */}
         <div 
           onClick={() => setHistoryType('expense')}
-          className="bg-white border border-slate-100 hover:border-red-300 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex items-center gap-4 cursor-pointer group"
+          className="bg-white border border-slate-100 hover:border-red-300 rounded-xl sm:rounded-2xl p-2.5 sm:p-5 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row items-center sm:items-center text-center sm:text-left gap-1.5 sm:gap-4 cursor-pointer group"
         >
-          <div className="p-3 bg-red-50 text-red-600 rounded-xl group-hover:scale-110 transition-transform">
-            <TrendingDown className="h-6 w-6" />
+          <div className="p-2 sm:p-3 bg-red-50 text-red-600 rounded-lg sm:rounded-xl group-hover:scale-110 transition-transform">
+            <TrendingDown className="h-4 w-4 sm:h-6 sm:w-6" />
           </div>
-          <div>
-            {/* Cambiamos el texto para que quede claro que es dinero que aún debes */}
-            <p className="text-slate-500 text-xs font-medium uppercase tracking-wider">Deuda Pendiente</p>
-            <p className="text-xl font-bold text-slate-900">${totals.expense.toFixed(2)}</p>
+          <div className="min-w-0 w-full">
+            <p className="text-slate-500 text-[10px] sm:text-xs font-medium uppercase tracking-wider truncate">Pendiente</p>
+            <p className="text-xs sm:text-xl font-bold text-slate-900 truncate">${totals.expense.toFixed(2)}</p>
           </div>
         </div>
 
+        {/* AHORROS */}
         <div 
           onClick={() => setHistoryType('saving')}
-          className="bg-white border border-slate-100 hover:border-blue-300 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex items-center gap-4 cursor-pointer group"
+          className="bg-white border border-slate-100 hover:border-blue-300 rounded-xl sm:rounded-2xl p-2.5 sm:p-5 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row items-center sm:items-center text-center sm:text-left gap-1.5 sm:gap-4 cursor-pointer group"
         >
-          <div className="p-3 bg-blue-50 text-blue-600 rounded-xl group-hover:scale-110 transition-transform">
-            <PiggyBank className="h-6 w-6" />
+          <div className="p-2 sm:p-3 bg-blue-50 text-blue-600 rounded-lg sm:rounded-xl group-hover:scale-110 transition-transform">
+            <PiggyBank className="h-4 w-4 sm:h-6 sm:w-6" />
           </div>
-          <div>
-            <p className="text-slate-500 text-xs font-medium uppercase tracking-wider">Ahorros</p>
-            <p className="text-xl font-bold text-slate-900">${totals.saving.toFixed(2)}</p>
+          <div className="min-w-0 w-full">
+            <p className="text-slate-500 text-[10px] sm:text-xs font-medium uppercase tracking-wider truncate">Ahorros</p>
+            <p className="text-xs sm:text-xl font-bold text-slate-900 truncate">${totals.saving.toFixed(2)}</p>
           </div>
         </div>
       </div>
 
       {/* LISTADO DE ÚLTIMOS MOVIMIENTOS */}
       <div>
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-slate-900">Últimos Movimientos</h3>
-          <span className="text-xs text-slate-500 font-medium">{mainTransactions.length} registrados</span>
+        <div className="flex justify-between items-center mb-3 sm:mb-4 px-1">
+          <h3 className="text-base sm:text-lg font-semibold text-slate-900">Últimos Movimientos</h3>
+          <span className="text-[11px] sm:text-xs text-slate-500 font-medium">{mainTransactions.length} registrados</span>
         </div>
         
         {mainTransactions.length === 0 ? (
-          <div className="text-center py-12 bg-white border border-slate-100 rounded-2xl border-dashed">
-            <p className="text-slate-500 text-sm">Aún no tienes movimientos registrados. ¡Crea el primero!</p>
+          <div className="text-center py-10 sm:py-12 bg-white border border-slate-100 rounded-2xl border-dashed px-4">
+            <p className="text-slate-500 text-xs sm:text-sm">Aún no tienes movimientos registrados. ¡Crea el primero!</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
             {mainTransactions.map((tx) => (
               <TransactionCard 
                 key={tx.id} 
@@ -172,6 +174,7 @@ export const Dashboard: React.FC = () => {
         )}
       </div>
 
+      {/* MODALES */}
       <TransactionDetailsModal
         isOpen={!!selectedTx && !isEditing}
         transaction={selectedTx}
