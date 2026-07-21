@@ -5,17 +5,24 @@ import type { Transaction } from '../types/transcations';
 
 interface TransactionCardProps {
   transaction: Transaction;
+  allTransactions?: Transaction[];
   onDelete: (id: string, e: React.MouseEvent) => void;
   onClick: (transaction: Transaction) => void;
 }
 
-export const TransactionCard: React.FC<TransactionCardProps> = ({ transaction, onDelete, onClick }) => {
+export const TransactionCard: React.FC<TransactionCardProps> = ({ transaction, allTransactions = [], onDelete, onClick }) => {
   const isIncome = transaction.type === 'income';
   const isExpense = transaction.type === 'expense';
   
   const paidAmount = transaction.paidAmount || 0;
   const remaining = transaction.amount - paidAmount;
   const isFullyPaid = isExpense && remaining === 0;
+
+  // Lógica para ingresos con deudas vinculadas
+  const linkedExpenses = allTransactions.filter(tx => tx.linkedTo === transaction.id);
+  const hasLinkedExpenses = isIncome && linkedExpenses.length > 0;
+  const linkedExpensesTotal = linkedExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+  const availableBalance = transaction.amount - linkedExpensesTotal;
 
   return (
     <div 
@@ -38,19 +45,24 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({ transaction, o
           isExpense ? 'bg-red-50 text-red-600' :
           'bg-blue-50 text-blue-600'
         }`}>
-          {isIncome ? <TrendingUp className="h-5 w-5" /> :
-           isExpense ? <TrendingDown className="h-5 w-5" /> :
+          {isIncome ? <TrendingUp className="h-5 w-5" /> : 
+           isExpense ? <TrendingDown className="h-5 w-5" /> : 
            <PiggyBank className="h-5 w-5" />}
         </div>
         
         <div className="min-w-0 flex-1">
-          <h4 className="font-semibold text-slate-900 capitalize truncate">
-            {transaction.category} 
+          <h4 className="font-semibold text-slate-900 capitalize truncate flex items-center gap-1.5 flex-wrap">
+            {transaction.category}
             {isFullyPaid && (
-  <span className="ml-2 text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full animate-pulse ring-1 ring-emerald-300">
-    Saldado
-  </span>
-)}
+              <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full ring-1 ring-emerald-300">
+                Saldado
+              </span>
+            )}
+            {hasLinkedExpenses && (
+              <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full ring-1 ring-amber-300">
+                Con Deuda
+              </span>
+            )}
           </h4>
           <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-1">
             <Calendar className="h-3 w-3" />
@@ -63,7 +75,7 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({ transaction, o
         <div className="border-t border-slate-50 pt-3 flex items-end justify-between">
           <div className="flex flex-col">
             <span className="text-xs font-medium text-slate-400">
-              {isExpense && paidAmount > 0 ? 'Pendiente' : 'Monto'}
+              {isExpense && paidAmount > 0 ? 'Pendiente' : (hasLinkedExpenses ? 'Balance' : 'Monto')}
             </span>
             <span className={`font-bold text-xl ${
               isIncome ? 'text-emerald-600' :
@@ -71,13 +83,20 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({ transaction, o
               isExpense ? 'text-slate-900' :
               'text-blue-600'
             }`}>
-              {isExpense ? '-' : '+'}${isExpense ? remaining.toFixed(2) : transaction.amount.toFixed(2)}
+              {isExpense ? '-' : '+'}${hasLinkedExpenses ? availableBalance.toFixed(2) : (isExpense ? remaining.toFixed(2) : transaction.amount.toFixed(2))}
             </span>
           </div>
           
           {isExpense && paidAmount > 0 && !isFullyPaid && (
             <div className="text-xs text-emerald-600 font-medium">
               Abonado: ${paidAmount.toFixed(2)}
+            </div>
+          )}
+
+          {hasLinkedExpenses && (
+            <div className="text-xs text-slate-500 font-medium text-right flex flex-col">
+              <span>Inicial: <span className="font-semibold text-slate-700">${transaction.amount.toFixed(2)}</span></span>
+              <span className="text-red-500 font-semibold">- ${linkedExpensesTotal.toFixed(2)}</span>
             </div>
           )}
         </div>
