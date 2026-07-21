@@ -43,7 +43,7 @@ export const Header: React.FC<HeaderProps> = ({ user, onUserUpdated }) => {
                 <Wallet className="h-4 w-4" />
               </div>
               <span className="font-semibold text-lg tracking-tight text-slate-900">
-                ARRIBA LAS PUERKS
+                SI
               </span>
             </Link>
             
