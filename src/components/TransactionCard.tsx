@@ -24,10 +24,12 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({ transaction, a
   
   const linkedExpensesTotal = linkedExpenses.reduce((sum, exp) => sum + exp.amount, 0);
   const linkedExpensesPaid = linkedExpenses.reduce((sum, exp) => sum + (exp.paidAmount || 0), 0);
+  
+  // La deuda que realmente falta por pagar
   const linkedExpensesRemaining = linkedExpensesTotal - linkedExpensesPaid;
   
-  // El balance real es el monto inicial menos el dinero que ya salió (abonos)
-  const currentBalance = transaction.amount - linkedExpensesPaid;
+  // El balance es el monto inicial menos la deuda restante (los abonos suman al balance)
+  const currentBalance = transaction.amount - linkedExpensesRemaining;
 
   return (
     <div 
@@ -101,11 +103,11 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({ transaction, a
           {hasLinkedExpenses && (
             <div className="text-[11px] text-slate-500 font-medium text-right flex flex-col items-end gap-0.5">
               <span>Inicial: <span className="font-semibold text-slate-700">${transaction.amount.toFixed(2)}</span></span>
-              {linkedExpensesPaid > 0 && (
-                <span className="text-emerald-600 font-semibold" title="Total abonado a deudas vinculadas">Abonos: -${linkedExpensesPaid.toFixed(2)}</span>
-              )}
               {linkedExpensesRemaining > 0 && (
-                <span className="text-red-500 font-semibold" title="Deuda restante por pagar">Deuda: ${linkedExpensesRemaining.toFixed(2)}</span>
+                <span className="text-red-500 font-semibold" title="Deuda restante por pagar">Deuda: -${linkedExpensesRemaining.toFixed(2)}</span>
+              )}
+              {linkedExpensesPaid > 0 && (
+                <span className="text-emerald-600 font-semibold" title="Total abonado a deudas vinculadas">Abonado: +${linkedExpensesPaid.toFixed(2)}</span>
               )}
             </div>
           )}
