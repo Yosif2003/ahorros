@@ -180,10 +180,12 @@ export const TransactionDetailsModal: React.FC<Props> = ({
   
   const linkedExpensesTotal = linkedExpenses.reduce((sum, exp) => sum + exp.amount, 0);
   const linkedExpensesPaid = linkedExpenses.reduce((sum, exp) => sum + (exp.paidAmount || 0), 0);
+  
+  // La deuda que realmente falta por pagar
   const linkedExpensesRemaining = linkedExpensesTotal - linkedExpensesPaid;
   
-  // Balance real descontando los abonos ya realizados
-  const currentBalance = transaction.amount - linkedExpensesPaid;
+  // Balance real sumando los abonos (Monto inicial - Deuda restante)
+  const currentBalance = transaction.amount - linkedExpensesRemaining;
 
   const totalMonths = transaction.duration || 0;
   const currentPaymentsMade = transaction.paymentsMade || 1;
