@@ -13,7 +13,6 @@ export const Dashboard: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // === ESTADOS DE MODALES Y SELECCIÓN ===
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -61,7 +60,6 @@ export const Dashboard: React.FC = () => {
 
   const balance = totals.income + totals.saving - totals.expense;
 
-  // Ocultamos los gastos vinculados del tablero principal
   const mainTransactions = transactions.filter(tx => !tx.linkedTo);
 
   if (isLoading) {
@@ -75,7 +73,7 @@ export const Dashboard: React.FC = () => {
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-8 animate-in fade-in duration-500">
       
-      {/* 1. SECCIÓN SUPERIOR: BALANCE & BOTÓN DE ACCIÓN */}
+      {/* SECCIÓN SUPERIOR: BALANCE & BOTÓN DE ACCIÓN */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-900 text-white rounded-2xl p-6 shadow-lg">
         <div>
           <p className="text-slate-400 text-sm font-medium mb-1">Balance Disponible</p>
@@ -94,7 +92,7 @@ export const Dashboard: React.FC = () => {
         </button>
       </div>
 
-      {/* 2. TARJETAS DE RESUMEN (VER HISTORIAL) */}
+      {/* TARJETAS DE RESUMEN */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div 
           onClick={() => setHistoryType('income')}
@@ -136,7 +134,7 @@ export const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. LISTADO DE ÚLTIMOS MOVIMIENTOS */}
+      {/* LISTADO DE ÚLTIMOS MOVIMIENTOS */}
       <div>
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold text-slate-900">Últimos Movimientos</h3>
@@ -152,7 +150,8 @@ export const Dashboard: React.FC = () => {
             {mainTransactions.map((tx) => (
               <TransactionCard 
                 key={tx.id} 
-                transaction={tx} 
+                transaction={tx}
+                allTransactions={transactions} /* <-- Añadido aquí */
                 onDelete={handleDelete} 
                 onClick={(tx) => setSelectedTx(tx)} 
               />
@@ -161,7 +160,6 @@ export const Dashboard: React.FC = () => {
         )}
       </div>
 
-      {/* === MODAL 1: DETALLE DEL MOVIMIENTO Y ABONOS === */}
       <TransactionDetailsModal
         isOpen={!!selectedTx && !isEditing}
         transaction={selectedTx}
@@ -171,7 +169,6 @@ export const Dashboard: React.FC = () => {
         onEdit={() => setIsEditing(true)}
       />
 
-      {/* === MODAL 2: CREACIÓN Y EDICIÓN DE MOVIMIENTOS === */}
       <TransactionModal
         isOpen={isCreateModalOpen || isEditing}
         initialData={isEditing ? selectedTx : null}
@@ -188,7 +185,6 @@ export const Dashboard: React.FC = () => {
         }}
       />
 
-      {/* === MODAL 3: HISTORIAL Y EVOLUCIÓN MENSUAL === */}
       <HistoryModal
         isOpen={!!historyType}
         type={historyType}
