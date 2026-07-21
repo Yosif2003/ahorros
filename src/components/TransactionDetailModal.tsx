@@ -1,6 +1,6 @@
 // src/components/TransactionDetailModal.tsx
 import React, { useState } from 'react';
-import { X, Calendar, Wallet, CheckCircle2, Edit2, RefreshCw, Power, Clock } from 'lucide-react';
+import { X, Calendar, Wallet, CheckCircle2, Edit2, RefreshCw, Power, Clock, Link as LinkIcon } from 'lucide-react';
 import type { Transaction } from '../types/transcations';
 import { transactionService } from '../features/transactions/transactionService';
 import toast from 'react-hot-toast';
@@ -8,13 +8,164 @@ import confetti from 'canvas-confetti';
 
 interface Props {
   transaction: Transaction | null;
+  allTransactions?: Transaction[];
   isOpen: boolean;
   onClose: () => void;
   onUpdate: () => void;
-  onEdit: () => void; 
+  onEdit: () => void;
 }
 
-export const TransactionDetailsModal: React.FC<Props> = ({ transaction, isOpen, onClose, onUpdate, onEdit }) => {
+// Componente para manejar cada gasto vinculado de forma individual
+const LinkedExpenseItem: React.FC<{
+  expense: Transaction;
+  onUpdate: () => void;
+}> = ({ expense, onUpdate }) => {
+  const [abono, setAbono] = useState('');
+  const [description, setDescription] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const paidAmount = expense.paidAmount || 0;
+  const remaining = expense.amount - paidAmount;
+  const progress = Math.min((paidAmount / expense.amount) * 100, 100);
+  const isFullyPaid = remaining === 0;
+
+  const handleAbonar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const abonoNum = parseFloat(abono);
+    if (!abono || abonoNum <= 0) return;
+    if (abonoNum > remaining) {
+      toast.error('El abono no puede superar el saldo pendiente');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      await transactionService.addPayment(expense.id, abonoNum, description);
+
+      if (abonoNum === remaining) {
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#10B981', '#34D399', '#059669', '#FCD34D']
+        });
+        toast.success('¡DEUDA SALDADA!', {
+          style: { background: '#10B981', color: '#fff', fontWeight: 'bold' }
+        });
+      } else {
+        toast.success('Abono registrado correctamente');
+      }
+      setAbono('');
+      setDescription('');
+      onUpdate();
+    } catch (error: any) {
+      toast.error(error.message || 'Error al abonar');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+      <div className="flex justify-between items-start">
+        <div>
+          <p className="font-semibold text-slate-900 capitalize text-sm">{expense.category}</p>
+          {expense.description && (
+            <p className="text-xs text-slate-500 mt-0.5">{expense.description}</p>
+          )}
+        </div>
+        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+          isFullyPaid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+        }`}>
+          {isFullyPaid ? 'Saldado' : 'Pendiente'}
+        </span>
+      </div>
+
+      {/* Progreso del gasto vinculado */}
+      <div className="space-y-1">
+        <div className="flex justify-between text-xs font-medium text-slate-600">
+          <span>Abonado: ${paidAmount.toFixed(2)}</span>
+          <span>Total: ${expense.amount.toFixed(2)}</span>
+        </div>
+        <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+          <div
+            className={`h-2 rounded-full transition-all duration-500 ${isFullyPaid ? 'bg-emerald-500' : 'bg-emerald-600'}`}
+            style={{ width: `${progress}%` }}
+          ></div>
+        </div>
+        <div className="flex justify-between text-[11px] text-slate-500 pt-0.5">
+          <span>Progreso: {progress.toFixed(1)}%</span>
+          <span className="font-semibold text-slate-700">Saldo pendiente: ${remaining.toFixed(2)}</span>
+        </div>
+      </div>
+
+      {/* Historial de Abonos */}
+      {expense.payments && expense.payments.length > 0 && (
+        <div className="pt-2 border-t border-slate-200/80">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1.5">Historial de Abonos</p>
+          <div className="space-y-1.5 max-h-28 overflow-y-auto pr-1">
+            {expense.payments.map((payment, idx) => (
+              <div key={payment._id || idx} className="flex justify-between items-center text-xs p-2 bg-white rounded border border-slate-100">
+                <div>
+                  <p className="font-medium text-slate-700">{payment.description || 'Abono sin descripción'}</p>
+                  <p className="text-[10px] text-slate-400">{new Date(payment.date).toLocaleDateString()}</p>
+                </div>
+                <span className="font-bold text-emerald-600">+${payment.amount.toFixed(2)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Formulario de Abono */}
+      {!isFullyPaid && (
+        <form onSubmit={handleAbonar} className="pt-2 border-t border-slate-200/80 space-y-2">
+          <label className="text-xs font-medium text-slate-700 block">Abonar a este gasto</label>
+          <div className="flex gap-2">
+            <div className="relative w-1/3">
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs">$</span>
+              <input
+                type="number"
+                step="0.01"
+                max={remaining}
+                value={abono}
+                onChange={(e) => setAbono(e.target.value)}
+                className="w-full pl-6 pr-2 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:border-emerald-500"
+                placeholder="0.00"
+              />
+            </div>
+            <div className="w-2/3">
+              <input
+                type="text"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:border-emerald-500"
+                placeholder="Descripción (ej. Quincena)"
+              />
+            </div>
+          </div>
+          <button
+            type="submit"
+            disabled={isLoading || !abono}
+            className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <Wallet className="h-3.5 w-3.5" />
+            {isLoading ? 'Registrando...' : 'Confirmar Abono'}
+          </button>
+        </form>
+      )}
+    </div>
+  );
+};
+
+export const TransactionDetailsModal: React.FC<Props> = ({
+  transaction,
+  allTransactions = [],
+  isOpen,
+  onClose,
+  onUpdate,
+  onEdit
+}) => {
   const [abono, setAbono] = useState('');
   const [description, setDescription] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -26,7 +177,9 @@ export const TransactionDetailsModal: React.FC<Props> = ({ transaction, isOpen, 
   const remaining = transaction.amount - paidAmount;
   const isExpense = transaction.type === 'expense';
 
-  // Cálculo de meses restantes
+  // Buscar si esta transacción tiene gastos vinculados
+  const linkedExpenses = allTransactions.filter((tx) => tx.linkedTo === transaction.id);
+
   const totalMonths = transaction.duration || 0;
   const currentPaymentsMade = transaction.paymentsMade || 1;
   const monthsRemaining = Math.max(0, totalMonths - currentPaymentsMade);
@@ -34,7 +187,6 @@ export const TransactionDetailsModal: React.FC<Props> = ({ transaction, isOpen, 
   const handleAbonar = async (e: React.FormEvent) => {
     e.preventDefault();
     const abonoNum = parseFloat(abono);
-
     if (!abono || abonoNum <= 0) return;
     if (abonoNum > remaining) {
       toast.error('El abono no puede superar el saldo pendiente');
@@ -50,7 +202,7 @@ export const TransactionDetailsModal: React.FC<Props> = ({ transaction, isOpen, 
           particleCount: 150,
           spread: 70,
           origin: { y: 0.6 },
-          colors: ['#10B981', '#34D399', '#059669', '#FCD34D'] 
+          colors: ['#10B981', '#34D399', '#059669', '#FCD34D']
         });
         toast.success('¡DEUDA SALDADA!', {
           style: { background: '#10B981', color: '#fff', fontWeight: 'bold' }
@@ -58,7 +210,6 @@ export const TransactionDetailsModal: React.FC<Props> = ({ transaction, isOpen, 
       } else {
         toast.success('Abono registrado correctamente');
       }
-
       setAbono('');
       setDescription('');
       onUpdate();
@@ -70,7 +221,6 @@ export const TransactionDetailsModal: React.FC<Props> = ({ transaction, isOpen, 
     }
   };
 
-  // Alternar estado (Pausar / Activar recurrencia)
   const handleToggleActive = async () => {
     try {
       setIsTogglingStatus(true);
@@ -91,10 +241,10 @@ export const TransactionDetailsModal: React.FC<Props> = ({ transaction, isOpen, 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden my-8">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden my-8 max-h-[90vh] flex flex-col">
         
-        {/* Cabecera con botones de edición */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+        {/* Header Modal */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
           <h2 className="text-lg font-semibold text-slate-900">Detalles del Movimiento</h2>
           <div className="flex items-center gap-1">
             <button 
@@ -113,7 +263,7 @@ export const TransactionDetailsModal: React.FC<Props> = ({ transaction, isOpen, 
           </div>
         </div>
 
-        <div className="p-6 space-y-4">
+        <div className="p-6 space-y-4 overflow-y-auto">
           <div>
             <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">Categoría</p>
             <p className="text-lg font-medium text-slate-900 capitalize">{transaction.category}</p>
@@ -127,7 +277,7 @@ export const TransactionDetailsModal: React.FC<Props> = ({ transaction, isOpen, 
             </div>
           </div>
 
-          {/* === TARJETA DE RECURRENCIA / SUSCRIPCIÓN === */}
+          {/* Recurrencia */}
           {transaction.isRecurring && (
             <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
               <div className="flex items-center justify-between pb-2 border-b border-slate-200">
@@ -143,21 +293,20 @@ export const TransactionDetailsModal: React.FC<Props> = ({ transaction, isOpen, 
               </div>
               
               <div className="grid grid-cols-2 gap-3 text-sm">
-  <div>
-    <p className="text-slate-500 text-xs">Servicio / Producto</p>
-    <p className="font-medium text-slate-900">{transaction.name || '-'}</p>
-  </div>
-  <div>
-    <p className="text-slate-500 text-xs">Meses Restantes</p>
-    <p className="font-bold text-slate-900">
-      {totalMonths > 0 
-        ? `${monthsRemaining} de ${totalMonths} mes(es)` 
-        : 'Indefinido'}
-    </p>
-  </div>
-</div>
+                <div>
+                  <p className="text-slate-500 text-xs">Servicio / Producto</p>
+                  <p className="font-medium text-slate-900">{transaction.name || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-slate-500 text-xs">Meses Restantes</p>
+                  <p className="font-bold text-slate-900">
+                    {totalMonths > 0 
+                      ? `${monthsRemaining} de ${totalMonths} mes(es)` 
+                      : 'Indefinido'}
+                  </p>
+                </div>
+              </div>
 
-              {/* Fecha exacta del próximo pago */}
               {transaction.nextPaymentDate && transaction.isActive && (
                 <div className="pt-2 border-t border-slate-200/60 flex items-center gap-2 text-xs text-slate-600">
                   <Clock className="h-3.5 w-3.5 text-blue-600 shrink-0" />
@@ -167,7 +316,6 @@ export const TransactionDetailsModal: React.FC<Props> = ({ transaction, isOpen, 
                 </div>
               )}
 
-              {/* Botón Administrable para Activar / Pausar cobro automático */}
               <button
                 type="button"
                 onClick={handleToggleActive}
@@ -212,8 +360,29 @@ export const TransactionDetailsModal: React.FC<Props> = ({ transaction, isOpen, 
             )}
           </div>
 
-          {/* Historial de Abonos */}
-          {transaction.payments && transaction.payments.length > 0 && (
+          {/* SECCIÓN DE GASTOS VINCULADOS */}
+          {linkedExpenses.length > 0 && (
+            <div className="pt-4 border-t border-slate-100 space-y-3">
+              <div className="flex items-center gap-2">
+                <LinkIcon className="h-4 w-4 text-emerald-600" />
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-700">
+                  Gastos Vinculados ({linkedExpenses.length})
+                </h3>
+              </div>
+              <div className="space-y-3">
+                {linkedExpenses.map((expense) => (
+                  <LinkedExpenseItem 
+                    key={expense.id} 
+                    expense={expense} 
+                    onUpdate={onUpdate} 
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Historial de Abonos del Movimiento Principal */}
+          {isExpense && transaction.payments && transaction.payments.length > 0 && (
             <div className="pt-4 border-t border-slate-100">
               <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-3">Historial de Abonos</p>
               <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
@@ -234,7 +403,7 @@ export const TransactionDetailsModal: React.FC<Props> = ({ transaction, isOpen, 
             </div>
           )}
 
-          {/* Formulario de Abono */}
+          {/* Formulario de Abono Principal */}
           {isExpense && remaining > 0 && (
             <form onSubmit={handleAbonar} className="pt-4 mt-4 border-t border-slate-100 space-y-3">
               <label className="text-xs font-medium text-slate-700 block">Registrar nuevo abono</label>
@@ -248,7 +417,7 @@ export const TransactionDetailsModal: React.FC<Props> = ({ transaction, isOpen, 
                     max={remaining}
                     value={abono}
                     onChange={(e) => setAbono(e.target.value)}
-                    className="w-full pl-7 pr-2 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                    className="w-full pl-7 pr-2 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-emerald-500"
                     placeholder="0.00"
                   />
                 </div>
@@ -258,7 +427,7 @@ export const TransactionDetailsModal: React.FC<Props> = ({ transaction, isOpen, 
                     type="text"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-emerald-500"
                     placeholder="Ej. Quincena, Bono..."
                   />
                 </div>

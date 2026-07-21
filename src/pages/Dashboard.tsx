@@ -12,14 +12,13 @@ import toast from 'react-hot-toast';
 export const Dashboard: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // === ESTADOS DE MODALES Y SELECCIÓN ===
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [historyType, setHistoryType] = useState<TransactionType | null>(null);
 
-  // Carga inicial y actualización de transacciones
   const fetchTransactions = async () => {
     try {
       setIsLoading(true);
@@ -39,7 +38,6 @@ export const Dashboard: React.FC = () => {
     return () => window.removeEventListener('transaction-updated', fetchTransactions);
   }, []);
 
-  // Eliminar transacción
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!window.confirm('¿Seguro que deseas eliminar este movimiento?')) return;
@@ -53,7 +51,6 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  // Cálculo de totales
   const totals = transactions.reduce(
     (acc, curr) => {
       acc[curr.type] += curr.amount;
@@ -62,8 +59,10 @@ export const Dashboard: React.FC = () => {
     { income: 0, expense: 0, saving: 0 }
   );
 
-  // Fórmula de Balance General: (Ingresos + Ahorros) - Gastos
   const balance = totals.income + totals.saving - totals.expense;
+
+  // Ocultamos los gastos vinculados del tablero principal
+  const mainTransactions = transactions.filter(tx => !tx.linkedTo);
 
   if (isLoading) {
     return (
@@ -95,14 +94,11 @@ export const Dashboard: React.FC = () => {
         </button>
       </div>
 
-      {/* 2. TARJETAS DE RESUMEN CLICLEABLES (VER HISTORIAL) */}
+      {/* 2. TARJETAS DE RESUMEN (VER HISTORIAL) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        
-        {/* Tarjeta Ingresos */}
         <div 
           onClick={() => setHistoryType('income')}
           className="bg-white border border-slate-100 hover:border-emerald-300 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex items-center gap-4 cursor-pointer group"
-          title="Haz clic para ver el historial de ingresos"
         >
           <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl group-hover:scale-110 transition-transform">
             <TrendingUp className="h-6 w-6" />
@@ -113,11 +109,9 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Tarjeta Gastos */}
         <div 
           onClick={() => setHistoryType('expense')}
           className="bg-white border border-slate-100 hover:border-red-300 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex items-center gap-4 cursor-pointer group"
-          title="Haz clic para ver el historial de gastos"
         >
           <div className="p-3 bg-red-50 text-red-600 rounded-xl group-hover:scale-110 transition-transform">
             <TrendingDown className="h-6 w-6" />
@@ -128,11 +122,9 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Tarjeta Ahorros */}
         <div 
           onClick={() => setHistoryType('saving')}
           className="bg-white border border-slate-100 hover:border-blue-300 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex items-center gap-4 cursor-pointer group"
-          title="Haz clic para ver el historial de ahorros"
         >
           <div className="p-3 bg-blue-50 text-blue-600 rounded-xl group-hover:scale-110 transition-transform">
             <PiggyBank className="h-6 w-6" />
@@ -142,23 +134,22 @@ export const Dashboard: React.FC = () => {
             <p className="text-xl font-bold text-slate-900">${totals.saving.toFixed(2)}</p>
           </div>
         </div>
-
       </div>
 
       {/* 3. LISTADO DE ÚLTIMOS MOVIMIENTOS */}
       <div>
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold text-slate-900">Últimos Movimientos</h3>
-          <span className="text-xs text-slate-500 font-medium">{transactions.length} registrados</span>
+          <span className="text-xs text-slate-500 font-medium">{mainTransactions.length} registrados</span>
         </div>
         
-        {transactions.length === 0 ? (
+        {mainTransactions.length === 0 ? (
           <div className="text-center py-12 bg-white border border-slate-100 rounded-2xl border-dashed">
             <p className="text-slate-500 text-sm">Aún no tienes movimientos registrados. ¡Crea el primero!</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {transactions.map((tx) => (
+            {mainTransactions.map((tx) => (
               <TransactionCard 
                 key={tx.id} 
                 transaction={tx} 
@@ -174,6 +165,7 @@ export const Dashboard: React.FC = () => {
       <TransactionDetailsModal
         isOpen={!!selectedTx && !isEditing}
         transaction={selectedTx}
+        allTransactions={transactions}
         onClose={() => setSelectedTx(null)}
         onUpdate={fetchTransactions}
         onEdit={() => setIsEditing(true)}
@@ -203,7 +195,6 @@ export const Dashboard: React.FC = () => {
         onClose={() => setHistoryType(null)}
         transactions={transactions}
       />
-
     </div>
   );
 };
