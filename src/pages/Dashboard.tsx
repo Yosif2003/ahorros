@@ -106,14 +106,14 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* TARJETAS DE RESUMEN (3 columnas en móvil) */}
-      <div className="grid grid-cols-3 sm:grid-cols-3 gap-2 sm:gap-4">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
         
         {/* INGRESOS */}
         <div 
           onClick={() => setHistoryType('income')}
-          className="bg-white border border-slate-100 hover:border-emerald-300 rounded-xl sm:rounded-2xl p-2.5 sm:p-5 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row items-center text-center sm:text-left gap-1.5 sm:gap-4 cursor-pointer group"
+          className="bg-white border border-slate-100 hover:border-emerald-300 rounded-xl sm:rounded-2xl p-2.5 sm:p-5 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row items-center text-center sm:text-left gap-1.5 sm:gap-4 cursor-pointer group min-w-0"
         >
-          <div className="p-2 sm:p-3 bg-emerald-50 text-emerald-600 rounded-lg sm:rounded-xl group-hover:scale-110 transition-transform">
+          <div className="p-2 sm:p-3 bg-emerald-50 text-emerald-600 rounded-lg sm:rounded-xl group-hover:scale-110 transition-transform shrink-0">
             <TrendingUp className="h-4 w-4 sm:h-6 sm:w-6" />
           </div>
           <div className="min-w-0 w-full">
@@ -125,9 +125,9 @@ export const Dashboard: React.FC = () => {
         {/* DEUDA PENDIENTE */}
         <div 
           onClick={() => setHistoryType('expense')}
-          className="bg-white border border-slate-100 hover:border-red-300 rounded-xl sm:rounded-2xl p-2.5 sm:p-5 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row items-center text-center sm:text-left gap-1.5 sm:gap-4 cursor-pointer group"
+          className="bg-white border border-slate-100 hover:border-red-300 rounded-xl sm:rounded-2xl p-2.5 sm:p-5 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row items-center text-center sm:text-left gap-1.5 sm:gap-4 cursor-pointer group min-w-0"
         >
-          <div className="p-2 sm:p-3 bg-red-50 text-red-600 rounded-lg sm:rounded-xl group-hover:scale-110 transition-transform">
+          <div className="p-2 sm:p-3 bg-red-50 text-red-600 rounded-lg sm:rounded-xl group-hover:scale-110 transition-transform shrink-0">
             <TrendingDown className="h-4 w-4 sm:h-6 sm:w-6" />
           </div>
           <div className="min-w-0 w-full">
@@ -139,9 +139,9 @@ export const Dashboard: React.FC = () => {
         {/* AHORROS */}
         <div 
           onClick={() => setHistoryType('saving')}
-          className="bg-white border border-slate-100 hover:border-blue-300 rounded-xl sm:rounded-2xl p-2.5 sm:p-5 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row items-center text-center sm:text-left gap-1.5 sm:gap-4 cursor-pointer group"
+          className="bg-white border border-slate-100 hover:border-blue-300 rounded-xl sm:rounded-2xl p-2.5 sm:p-5 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row items-center text-center sm:text-left gap-1.5 sm:gap-4 cursor-pointer group min-w-0"
         >
-          <div className="p-2 sm:p-3 bg-blue-50 text-blue-600 rounded-lg sm:rounded-xl group-hover:scale-110 transition-transform">
+          <div className="p-2 sm:p-3 bg-blue-50 text-blue-600 rounded-lg sm:rounded-xl group-hover:scale-110 transition-transform shrink-0">
             <PiggyBank className="h-4 w-4 sm:h-6 sm:w-6" />
           </div>
           <div className="min-w-0 w-full">
@@ -196,18 +196,20 @@ export const Dashboard: React.FC = () => {
           <div
             className={
               viewMode === 'grid'
-                ? "grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-5"
+                ? "grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4"
                 : "flex flex-col gap-2.5"
             }
           >
             {mainTransactions.map((tx) => (
-              <TransactionCard 
-                key={tx.id} 
-                transaction={tx}
-                allTransactions={transactions}
-                onDelete={handleDelete} 
-                onClick={(tx) => setSelectedTx(tx)} 
-              />
+              <div key={tx.id} className="min-w-0 w-full">
+                <TransactionCard 
+                  transaction={tx}
+                  allTransactions={transactions}
+                  onDelete={handleDelete} 
+                  onClick={(tx) => setSelectedTx(tx)}
+                  viewMode={viewMode}
+                />
+              </div>
             ))}
           </div>
         )}
