@@ -13,6 +13,7 @@ export const Dashboard: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // === ESTADOS DE MODALES Y SELECCIÓN ===
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -50,16 +51,26 @@ export const Dashboard: React.FC = () => {
     }
   };
 
+  // === CÁLCULO DE TOTALES (TOMANDO EN CUENTA LOS ABONOS) ===
   const totals = transactions.reduce(
     (acc, curr) => {
-      acc[curr.type] += curr.amount;
+      if (curr.type === 'expense') {
+        // En lugar de sumar el total, sumamos solo la DEUDA RESTANTE.
+        // Así, cuando abonas, la deuda baja y tu balance disponible sube.
+        const remainingDebt = curr.amount - (curr.paidAmount || 0);
+        acc.expense += remainingDebt;
+      } else {
+        acc[curr.type] += curr.amount;
+      }
       return acc;
     },
     { income: 0, expense: 0, saving: 0 }
   );
 
+  // El balance ahora es: Ingresos + Ahorros - Deudas Pendientes
   const balance = totals.income + totals.saving - totals.expense;
 
+  // Filtrar para ocultar los gastos vinculados del tablero principal
   const mainTransactions = transactions.filter(tx => !tx.linkedTo);
 
   if (isLoading) {
@@ -115,7 +126,8 @@ export const Dashboard: React.FC = () => {
             <TrendingDown className="h-6 w-6" />
           </div>
           <div>
-            <p className="text-slate-500 text-xs font-medium uppercase tracking-wider">Gastos</p>
+            {/* Cambiamos el texto para que quede claro que es dinero que aún debes */}
+            <p className="text-slate-500 text-xs font-medium uppercase tracking-wider">Deuda Pendiente</p>
             <p className="text-xl font-bold text-slate-900">${totals.expense.toFixed(2)}</p>
           </div>
         </div>
@@ -151,7 +163,7 @@ export const Dashboard: React.FC = () => {
               <TransactionCard 
                 key={tx.id} 
                 transaction={tx}
-                allTransactions={transactions} /* <-- Añadido aquí */
+                allTransactions={transactions}
                 onDelete={handleDelete} 
                 onClick={(tx) => setSelectedTx(tx)} 
               />
