@@ -174,11 +174,16 @@ export const TransactionDetailsModal: React.FC<Props> = ({
   const isIncome = transaction.type === 'income';
   const isExpense = transaction.type === 'expense';
 
-  // Cálculos de vinculaciones
+  // Cálculos de vinculaciones y abonos
   const linkedExpenses = allTransactions.filter((tx) => tx.linkedTo === transaction.id);
   const hasLinkedExpenses = isIncome && linkedExpenses.length > 0;
+  
   const linkedExpensesTotal = linkedExpenses.reduce((sum, exp) => sum + exp.amount, 0);
-  const availableBalance = transaction.amount - linkedExpensesTotal;
+  const linkedExpensesPaid = linkedExpenses.reduce((sum, exp) => sum + (exp.paidAmount || 0), 0);
+  const linkedExpensesRemaining = linkedExpensesTotal - linkedExpensesPaid;
+  
+  // Balance real descontando los abonos ya realizados
+  const currentBalance = transaction.amount - linkedExpensesPaid;
 
   const totalMonths = transaction.duration || 0;
   const currentPaymentsMade = transaction.paymentsMade || 1;
@@ -351,13 +356,25 @@ export const TransactionDetailsModal: React.FC<Props> = ({
             
             {hasLinkedExpenses && (
               <>
-                <div className="flex justify-between items-center text-red-600 mb-2">
-                  <span>Deuda Vinculada:</span>
-                  <span className="font-semibold">-${linkedExpensesTotal.toFixed(2)}</span>
+                <div className="flex justify-between items-center text-slate-600 mb-2">
+                  <span className="text-sm">Deuda Vinculada Total:</span>
+                  <span className="font-semibold text-sm">-${linkedExpensesTotal.toFixed(2)}</span>
                 </div>
+                {linkedExpensesPaid > 0 && (
+                  <div className="flex justify-between items-center text-emerald-600 mb-2">
+                    <span className="text-sm">Deuda Abonada:</span>
+                    <span className="font-semibold text-sm">+${linkedExpensesPaid.toFixed(2)}</span>
+                  </div>
+                )}
+                {linkedExpensesRemaining > 0 && (
+                  <div className="flex justify-between items-center text-red-500 mb-3">
+                    <span className="text-sm">Deuda por Pagar:</span>
+                    <span className="font-semibold text-sm">-${linkedExpensesRemaining.toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center text-emerald-700 font-bold bg-emerald-50 p-3 rounded-xl border border-emerald-200">
-                  <span>Balance Disponible:</span>
-                  <span>${availableBalance.toFixed(2)}</span>
+                  <span>Balance Actual del Ingreso:</span>
+                  <span>${currentBalance.toFixed(2)}</span>
                 </div>
               </>
             )}
