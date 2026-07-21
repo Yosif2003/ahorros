@@ -15,7 +15,6 @@ interface Props {
   onEdit: () => void;
 }
 
-// Componente para manejar cada gasto vinculado de forma individual
 const LinkedExpenseItem: React.FC<{
   expense: Transaction;
   onUpdate: () => void;
@@ -81,7 +80,6 @@ const LinkedExpenseItem: React.FC<{
         </span>
       </div>
 
-      {/* Progreso del gasto vinculado */}
       <div className="space-y-1">
         <div className="flex justify-between text-xs font-medium text-slate-600">
           <span>Abonado: ${paidAmount.toFixed(2)}</span>
@@ -99,7 +97,6 @@ const LinkedExpenseItem: React.FC<{
         </div>
       </div>
 
-      {/* Historial de Abonos */}
       {expense.payments && expense.payments.length > 0 && (
         <div className="pt-2 border-t border-slate-200/80">
           <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1.5">Historial de Abonos</p>
@@ -117,7 +114,6 @@ const LinkedExpenseItem: React.FC<{
         </div>
       )}
 
-      {/* Formulario de Abono */}
       {!isFullyPaid && (
         <form onSubmit={handleAbonar} className="pt-2 border-t border-slate-200/80 space-y-2">
           <label className="text-xs font-medium text-slate-700 block">Abonar a este gasto</label>
@@ -175,10 +171,14 @@ export const TransactionDetailsModal: React.FC<Props> = ({
 
   const paidAmount = transaction.paidAmount || 0;
   const remaining = transaction.amount - paidAmount;
+  const isIncome = transaction.type === 'income';
   const isExpense = transaction.type === 'expense';
 
-  // Buscar si esta transacción tiene gastos vinculados
+  // Cálculos de vinculaciones
   const linkedExpenses = allTransactions.filter((tx) => tx.linkedTo === transaction.id);
+  const hasLinkedExpenses = isIncome && linkedExpenses.length > 0;
+  const linkedExpensesTotal = linkedExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+  const availableBalance = transaction.amount - linkedExpensesTotal;
 
   const totalMonths = transaction.duration || 0;
   const currentPaymentsMade = transaction.paymentsMade || 1;
@@ -341,10 +341,27 @@ export const TransactionDetailsModal: React.FC<Props> = ({
 
           <div className="pt-4 border-t border-slate-100">
             <div className="flex justify-between items-center mb-2">
-              <span className="text-slate-500 font-medium">Monto Total:</span>
-              <span className="font-bold text-lg">${transaction.amount.toFixed(2)}</span>
+              <span className="text-slate-500 font-medium">
+                {hasLinkedExpenses ? 'Monto Inicial:' : 'Monto Total:'}
+              </span>
+              <span className={`font-bold text-lg ${hasLinkedExpenses ? 'text-slate-900' : ''}`}>
+                ${transaction.amount.toFixed(2)}
+              </span>
             </div>
             
+            {hasLinkedExpenses && (
+              <>
+                <div className="flex justify-between items-center text-red-600 mb-2">
+                  <span>Deuda Vinculada:</span>
+                  <span className="font-semibold">-${linkedExpensesTotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center text-emerald-700 font-bold bg-emerald-50 p-3 rounded-xl border border-emerald-200">
+                  <span>Balance Disponible:</span>
+                  <span>${availableBalance.toFixed(2)}</span>
+                </div>
+              </>
+            )}
+
             {isExpense && paidAmount > 0 && (
               <div className="flex justify-between items-center text-emerald-600 mb-2">
                 <span>Total Abonado:</span>
@@ -361,7 +378,7 @@ export const TransactionDetailsModal: React.FC<Props> = ({
           </div>
 
           {/* SECCIÓN DE GASTOS VINCULADOS */}
-          {linkedExpenses.length > 0 && (
+          {hasLinkedExpenses && (
             <div className="pt-4 border-t border-slate-100 space-y-3">
               <div className="flex items-center gap-2">
                 <LinkIcon className="h-4 w-4 text-emerald-600" />
