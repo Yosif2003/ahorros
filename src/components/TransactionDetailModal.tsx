@@ -1,0 +1,281 @@
+// src/components/TransactionDetailModal.tsx
+import React, { useState } from 'react';
+import { X, Calendar, Wallet, CheckCircle2, Edit2, RefreshCw, Power, Clock } from 'lucide-react';
+import type { Transaction } from '../types/transcations';
+import { transactionService } from '../features/transactions/transactionService';
+import toast from 'react-hot-toast';
+import confetti from 'canvas-confetti';
+
+interface Props {
+  transaction: Transaction | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onUpdate: () => void;
+  onEdit: () => void; 
+}
+
+export const TransactionDetailsModal: React.FC<Props> = ({ transaction, isOpen, onClose, onUpdate, onEdit }) => {
+  const [abono, setAbono] = useState('');
+  const [description, setDescription] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isTogglingStatus, setIsTogglingStatus] = useState(false);
+
+  if (!isOpen || !transaction) return null;
+
+  const paidAmount = transaction.paidAmount || 0;
+  const remaining = transaction.amount - paidAmount;
+  const isExpense = transaction.type === 'expense';
+
+  // Cálculo de meses restantes
+  const totalMonths = transaction.duration || 0;
+  const currentPaymentsMade = transaction.paymentsMade || 1;
+  const monthsRemaining = Math.max(0, totalMonths - currentPaymentsMade);
+
+  const handleAbonar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const abonoNum = parseFloat(abono);
+
+    if (!abono || abonoNum <= 0) return;
+    if (abonoNum > remaining) {
+      toast.error('El abono no puede superar el saldo pendiente');
+      return;
+    }
+    
+    try {
+      setIsLoading(true);
+      await transactionService.addPayment(transaction.id, abonoNum, description);
+      
+      if (abonoNum === remaining) {
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#10B981', '#34D399', '#059669', '#FCD34D'] 
+        });
+        toast.success('¡DEUDA SALDADA!', {
+          style: { background: '#10B981', color: '#fff', fontWeight: 'bold' }
+        });
+      } else {
+        toast.success('Abono registrado correctamente');
+      }
+
+      setAbono('');
+      setDescription('');
+      onUpdate();
+      onClose();
+    } catch (error: any) {
+      toast.error(error.message || 'Error al abonar');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Alternar estado (Pausar / Activar recurrencia)
+  const handleToggleActive = async () => {
+    try {
+      setIsTogglingStatus(true);
+      await transactionService.updateTransaction(transaction.id, {
+        amount: transaction.amount,
+        category: transaction.category,
+        isActive: !transaction.isActive
+      });
+      toast.success(transaction.isActive ? 'Recurrencia pausada' : 'Recurrencia activada');
+      onUpdate();
+      onClose();
+    } catch (error: any) {
+      toast.error('No se pudo cambiar el estado de la recurrencia');
+    } finally {
+      setIsTogglingStatus(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden my-8">
+        
+        {/* Cabecera con botones de edición */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+          <h2 className="text-lg font-semibold text-slate-900">Detalles del Movimiento</h2>
+          <div className="flex items-center gap-1">
+            <button 
+              onClick={onEdit} 
+              className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+              title="Editar transacción"
+            >
+              <Edit2 className="h-5 w-5" />
+            </button>
+            <button 
+              onClick={onClose} 
+              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-4">
+          <div>
+            <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">Categoría</p>
+            <p className="text-lg font-medium text-slate-900 capitalize">{transaction.category}</p>
+          </div>
+          
+          <div>
+            <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">Fecha de Registro</p>
+            <div className="flex items-center gap-2 text-slate-900">
+              <Calendar className="h-4 w-4 text-slate-400" />
+              <span>{new Date(transaction.date).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+            </div>
+          </div>
+
+          {/* === TARJETA DE RECURRENCIA / SUSCRIPCIÓN === */}
+          {transaction.isRecurring && (
+            <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                <div className="flex items-center gap-2 text-slate-700 font-medium">
+                  <RefreshCw className="h-4 w-4 text-emerald-600" />
+                  <span>{transaction.recurringType === 'subscription' ? 'Suscripción' : 'Pago a Meses'}</span>
+                </div>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                  transaction.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                }`}>
+                  {transaction.isActive ? 'Activo' : 'Pausado'}
+                </span>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3 text-sm">
+  <div>
+    <p className="text-slate-500 text-xs">Servicio / Producto</p>
+    <p className="font-medium text-slate-900">{transaction.name || '-'}</p>
+  </div>
+  <div>
+    <p className="text-slate-500 text-xs">Meses Restantes</p>
+    <p className="font-bold text-slate-900">
+      {totalMonths > 0 
+        ? `${monthsRemaining} de ${totalMonths} mes(es)` 
+        : 'Indefinido'}
+    </p>
+  </div>
+</div>
+
+              {/* Fecha exacta del próximo pago */}
+              {transaction.nextPaymentDate && transaction.isActive && (
+                <div className="pt-2 border-t border-slate-200/60 flex items-center gap-2 text-xs text-slate-600">
+                  <Clock className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                  <span>
+                    Próximo cobro: <strong>{new Date(transaction.nextPaymentDate).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}</strong>
+                  </span>
+                </div>
+              )}
+
+              {/* Botón Administrable para Activar / Pausar cobro automático */}
+              <button
+                type="button"
+                onClick={handleToggleActive}
+                disabled={isTogglingStatus}
+                className={`w-full mt-2 py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 border transition-colors cursor-pointer ${
+                  transaction.isActive 
+                    ? 'bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100' 
+                    : 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100'
+                }`}
+              >
+                <Power className="h-3.5 w-3.5" />
+                {transaction.isActive ? 'Pausar Cobro Automático' : 'Reactivar Cobro Automático'}
+              </button>
+            </div>
+          )}
+
+          {transaction.description && (
+            <div>
+              <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">Descripción</p>
+              <p className="text-sm text-slate-700 bg-slate-50 p-3 rounded-lg border border-slate-100">{transaction.description}</p>
+            </div>
+          )}
+
+          <div className="pt-4 border-t border-slate-100">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-slate-500 font-medium">Monto Total:</span>
+              <span className="font-bold text-lg">${transaction.amount.toFixed(2)}</span>
+            </div>
+            
+            {isExpense && paidAmount > 0 && (
+              <div className="flex justify-between items-center text-emerald-600 mb-2">
+                <span>Total Abonado:</span>
+                <span className="font-medium">-${paidAmount.toFixed(2)}</span>
+              </div>
+            )}
+            
+            {isExpense && (
+              <div className="flex justify-between items-center text-slate-900 font-bold bg-slate-50 p-3 rounded-xl border border-slate-200">
+                <span>Saldo Pendiente:</span>
+                <span>${remaining.toFixed(2)}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Historial de Abonos */}
+          {transaction.payments && transaction.payments.length > 0 && (
+            <div className="pt-4 border-t border-slate-100">
+              <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-3">Historial de Abonos</p>
+              <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                {transaction.payments.map((payment, idx) => (
+                  <div key={payment._id || idx} className="flex justify-between items-center p-2.5 bg-slate-50 rounded-lg border border-slate-100">
+                    <div>
+                      <p className="text-sm font-medium text-slate-700">{payment.description || 'Abono sin descripción'}</p>
+                      <p className="text-[10px] text-slate-400">
+                        {new Date(payment.date).toLocaleDateString()} {new Date(payment.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                      </p>
+                    </div>
+                    <span className="text-sm font-bold text-emerald-600 flex items-center gap-1">
+                      +${payment.amount.toFixed(2)} <CheckCircle2 className="h-3 w-3" />
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Formulario de Abono */}
+          {isExpense && remaining > 0 && (
+            <form onSubmit={handleAbonar} className="pt-4 mt-4 border-t border-slate-100 space-y-3">
+              <label className="text-xs font-medium text-slate-700 block">Registrar nuevo abono</label>
+              
+              <div className="flex gap-2">
+                <div className="relative w-1/3">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    max={remaining}
+                    value={abono}
+                    onChange={(e) => setAbono(e.target.value)}
+                    className="w-full pl-7 pr-2 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                    placeholder="0.00"
+                  />
+                </div>
+                
+                <div className="w-2/3">
+                  <input
+                    type="text"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                    placeholder="Ej. Quincena, Bono..."
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading || !abono}
+                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Wallet className="h-4 w-4" />
+                {isLoading ? 'Registrando...' : 'Confirmar Abono'}
+              </button>
+            </form>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
