@@ -18,11 +18,16 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({ transaction, a
   const remaining = transaction.amount - paidAmount;
   const isFullyPaid = isExpense && remaining === 0;
 
-  // Lógica para ingresos con deudas vinculadas
+  // Lógica para ingresos con deudas vinculadas y abonos
   const linkedExpenses = allTransactions.filter(tx => tx.linkedTo === transaction.id);
   const hasLinkedExpenses = isIncome && linkedExpenses.length > 0;
+  
   const linkedExpensesTotal = linkedExpenses.reduce((sum, exp) => sum + exp.amount, 0);
-  const availableBalance = transaction.amount - linkedExpensesTotal;
+  const linkedExpensesPaid = linkedExpenses.reduce((sum, exp) => sum + (exp.paidAmount || 0), 0);
+  const linkedExpensesRemaining = linkedExpensesTotal - linkedExpensesPaid;
+  
+  // El balance real es el monto inicial menos el dinero que ya salió (abonos)
+  const currentBalance = transaction.amount - linkedExpensesPaid;
 
   return (
     <div 
@@ -75,7 +80,7 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({ transaction, a
         <div className="border-t border-slate-50 pt-3 flex items-end justify-between">
           <div className="flex flex-col">
             <span className="text-xs font-medium text-slate-400">
-              {isExpense && paidAmount > 0 ? 'Pendiente' : (hasLinkedExpenses ? 'Balance' : 'Monto')}
+              {isExpense && paidAmount > 0 ? 'Pendiente' : (hasLinkedExpenses ? 'Balance Actual' : 'Monto')}
             </span>
             <span className={`font-bold text-xl ${
               isIncome ? 'text-emerald-600' :
@@ -83,7 +88,7 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({ transaction, a
               isExpense ? 'text-slate-900' :
               'text-blue-600'
             }`}>
-              {isExpense ? '-' : '+'}${hasLinkedExpenses ? availableBalance.toFixed(2) : (isExpense ? remaining.toFixed(2) : transaction.amount.toFixed(2))}
+              {isExpense ? '-' : '+'}${hasLinkedExpenses ? currentBalance.toFixed(2) : (isExpense ? remaining.toFixed(2) : transaction.amount.toFixed(2))}
             </span>
           </div>
           
@@ -94,9 +99,14 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({ transaction, a
           )}
 
           {hasLinkedExpenses && (
-            <div className="text-xs text-slate-500 font-medium text-right flex flex-col">
+            <div className="text-[11px] text-slate-500 font-medium text-right flex flex-col items-end gap-0.5">
               <span>Inicial: <span className="font-semibold text-slate-700">${transaction.amount.toFixed(2)}</span></span>
-              <span className="text-red-500 font-semibold">- ${linkedExpensesTotal.toFixed(2)}</span>
+              {linkedExpensesPaid > 0 && (
+                <span className="text-emerald-600 font-semibold" title="Total abonado a deudas vinculadas">Abonos: -${linkedExpensesPaid.toFixed(2)}</span>
+              )}
+              {linkedExpensesRemaining > 0 && (
+                <span className="text-red-500 font-semibold" title="Deuda restante por pagar">Deuda: ${linkedExpensesRemaining.toFixed(2)}</span>
+              )}
             </div>
           )}
         </div>
