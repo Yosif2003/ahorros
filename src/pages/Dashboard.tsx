@@ -1,6 +1,6 @@
 // src/pages/Dashboard.tsx
 import React, { useEffect, useState } from 'react';
-import { TrendingUp, TrendingDown, PiggyBank, Plus } from 'lucide-react';
+import { TrendingUp, TrendingDown, PiggyBank, Plus, LayoutGrid, List } from 'lucide-react';
 import { transactionService } from '../features/transactions/transactionService';
 import type { Transaction, TransactionType } from '../types/transcations';
 import { TransactionCard } from '../components/TransactionCard';
@@ -12,6 +12,9 @@ import toast from 'react-hot-toast';
 export const Dashboard: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // === ESTADO PARA MODO DE VISTA (CUADRÍCULA O LISTA) ===
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   // === ESTADOS DE MODALES Y SELECCIÓN ===
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
@@ -27,7 +30,7 @@ export const Dashboard: React.FC = () => {
       setTransactions(sortedData);
     } catch (error) {
       toast.error('Error al cargar los movimientos');
-    } finally {
+    } fontally {
       setIsLoading(false);
     }
   };
@@ -102,13 +105,13 @@ export const Dashboard: React.FC = () => {
         </button>
       </div>
 
-      {/* TARJETAS DE RESUMEN (Optimizadas para 3 columnas compactas en móvil) */}
+      {/* TARJETAS DE RESUMEN (3 columnas en móvil) */}
       <div className="grid grid-cols-3 sm:grid-cols-3 gap-2 sm:gap-4">
         
         {/* INGRESOS */}
         <div 
           onClick={() => setHistoryType('income')}
-          className="bg-white border border-slate-100 hover:border-emerald-300 rounded-xl sm:rounded-2xl p-2.5 sm:p-5 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row items-center sm:items-center text-center sm:text-left gap-1.5 sm:gap-4 cursor-pointer group"
+          className="bg-white border border-slate-100 hover:border-emerald-300 rounded-xl sm:rounded-2xl p-2.5 sm:p-5 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row items-center text-center sm:text-left gap-1.5 sm:gap-4 cursor-pointer group"
         >
           <div className="p-2 sm:p-3 bg-emerald-50 text-emerald-600 rounded-lg sm:rounded-xl group-hover:scale-110 transition-transform">
             <TrendingUp className="h-4 w-4 sm:h-6 sm:w-6" />
@@ -122,7 +125,7 @@ export const Dashboard: React.FC = () => {
         {/* DEUDA PENDIENTE */}
         <div 
           onClick={() => setHistoryType('expense')}
-          className="bg-white border border-slate-100 hover:border-red-300 rounded-xl sm:rounded-2xl p-2.5 sm:p-5 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row items-center sm:items-center text-center sm:text-left gap-1.5 sm:gap-4 cursor-pointer group"
+          className="bg-white border border-slate-100 hover:border-red-300 rounded-xl sm:rounded-2xl p-2.5 sm:p-5 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row items-center text-center sm:text-left gap-1.5 sm:gap-4 cursor-pointer group"
         >
           <div className="p-2 sm:p-3 bg-red-50 text-red-600 rounded-lg sm:rounded-xl group-hover:scale-110 transition-transform">
             <TrendingDown className="h-4 w-4 sm:h-6 sm:w-6" />
@@ -136,7 +139,7 @@ export const Dashboard: React.FC = () => {
         {/* AHORROS */}
         <div 
           onClick={() => setHistoryType('saving')}
-          className="bg-white border border-slate-100 hover:border-blue-300 rounded-xl sm:rounded-2xl p-2.5 sm:p-5 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row items-center sm:items-center text-center sm:text-left gap-1.5 sm:gap-4 cursor-pointer group"
+          className="bg-white border border-slate-100 hover:border-blue-300 rounded-xl sm:rounded-2xl p-2.5 sm:p-5 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row items-center text-center sm:text-left gap-1.5 sm:gap-4 cursor-pointer group"
         >
           <div className="p-2 sm:p-3 bg-blue-50 text-blue-600 rounded-lg sm:rounded-xl group-hover:scale-110 transition-transform">
             <PiggyBank className="h-4 w-4 sm:h-6 sm:w-6" />
@@ -150,9 +153,38 @@ export const Dashboard: React.FC = () => {
 
       {/* LISTADO DE ÚLTIMOS MOVIMIENTOS */}
       <div>
+        {/* ENCABEZADO CON CONTROLES DE VISTA */}
         <div className="flex justify-between items-center mb-3 sm:mb-4 px-1">
-          <h3 className="text-base sm:text-lg font-semibold text-slate-900">Últimos Movimientos</h3>
-          <span className="text-[11px] sm:text-xs text-slate-500 font-medium">{mainTransactions.length} registrados</span>
+          <div className="flex items-center gap-2">
+            <h3 className="text-base sm:text-lg font-semibold text-slate-900">Últimos Movimientos</h3>
+            <span className="text-[11px] sm:text-xs text-slate-500 font-medium">({mainTransactions.length})</span>
+          </div>
+
+          {/* Selector Lista / Cuadrícula */}
+          <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200/80">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`p-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${
+                viewMode === 'grid'
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+              title="Vista en Cuadrícula"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`p-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${
+                viewMode === 'list'
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+              title="Vista en Lista"
+            >
+              <List className="h-4 w-4" />
+            </button>
+          </div>
         </div>
         
         {mainTransactions.length === 0 ? (
@@ -160,7 +192,14 @@ export const Dashboard: React.FC = () => {
             <p className="text-slate-500 text-xs sm:text-sm">Aún no tienes movimientos registrados. ¡Crea el primero!</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
+          /* Renderizado dinámico según el modo de vista */
+          <div
+            className={
+              viewMode === 'grid'
+                ? "grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-5"
+                : "flex flex-col gap-2.5"
+            }
+          >
             {mainTransactions.map((tx) => (
               <TransactionCard 
                 key={tx.id} 
