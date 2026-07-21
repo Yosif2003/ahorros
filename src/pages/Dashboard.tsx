@@ -30,7 +30,7 @@ export const Dashboard: React.FC = () => {
       setTransactions(sortedData);
     } catch (error) {
       toast.error('Error al cargar los movimientos');
-    } fontally {
+    } finally {
       setIsLoading(false);
     }
   };
