@@ -13,10 +13,10 @@ export const Dashboard: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // === ESTADO PARA MODO DE VISTA (CUADRÍCULA O LISTA) ===
+  // === ESTADO PARA MODO DE VISTA ===
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  // === ESTADOS DE MODALES Y SELECCIÓN ===
+  // === ESTADOS DE MODALES ===
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -54,7 +54,6 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  // === CÁLCULO DE TOTALES (TOMANDO EN CUENTA LOS ABONOS) ===
   const totals = transactions.reduce(
     (acc, curr) => {
       if (curr.type === 'expense') {
@@ -68,10 +67,7 @@ export const Dashboard: React.FC = () => {
     { income: 0, expense: 0, saving: 0 }
   );
 
-  // El balance ahora es: Ingresos + Ahorros - Deudas Pendientes
   const balance = totals.income + totals.saving - totals.expense;
-
-  // Filtrar para ocultar los gastos vinculados del tablero principal
   const mainTransactions = transactions.filter(tx => !tx.linkedTo);
 
   if (isLoading) {
@@ -85,7 +81,7 @@ export const Dashboard: React.FC = () => {
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-5 sm:py-8 space-y-6 sm:space-y-8 animate-in fade-in duration-500">
       
-      {/* SECCIÓN SUPERIOR: BALANCE & BOTÓN DE ACCIÓN */}
+      {/* HEADER: BALANCE & BOTÓN */}
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-900 text-white rounded-2xl p-5 sm:p-6 shadow-lg">
         <div className="text-center sm:text-left w-full sm:w-auto">
           <p className="text-slate-400 text-xs sm:text-sm font-medium mb-1">Balance Disponible</p>
@@ -105,29 +101,19 @@ export const Dashboard: React.FC = () => {
         </button>
       </div>
 
-      {/* TARJETAS DE RESUMEN (Optimizadas para que no corten números grandes) */}
+      {/* TARJETAS DE RESUMEN */}
       <div className="grid grid-cols-3 gap-2 sm:gap-4">
-        
-        {/* INGRESOS */}
-        <div 
-          onClick={() => setHistoryType('income')}
-          className="bg-white border border-slate-100 hover:border-emerald-300 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row items-center text-center sm:text-left gap-2 sm:gap-4 cursor-pointer group"
-        >
+        <div onClick={() => setHistoryType('income')} className="bg-white border border-slate-100 hover:border-emerald-300 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row items-center text-center sm:text-left gap-2 sm:gap-4 cursor-pointer group">
           <div className="p-2 sm:p-3 bg-emerald-50 text-emerald-600 rounded-lg sm:rounded-xl group-hover:scale-110 transition-transform shrink-0">
             <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6" />
           </div>
           <div className="w-full">
             <p className="text-slate-500 text-[10px] sm:text-xs font-medium uppercase tracking-wider line-clamp-1">Ingresos</p>
-            {/* Se reemplaza truncate por break-words/text-wrap para que los números bajen de línea si no caben */}
             <p className="text-sm sm:text-xl font-bold text-slate-900 break-words mt-0.5">${totals.income.toFixed(2)}</p>
           </div>
         </div>
 
-        {/* DEUDA PENDIENTE */}
-        <div 
-          onClick={() => setHistoryType('expense')}
-          className="bg-white border border-slate-100 hover:border-red-300 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row items-center text-center sm:text-left gap-2 sm:gap-4 cursor-pointer group"
-        >
+        <div onClick={() => setHistoryType('expense')} className="bg-white border border-slate-100 hover:border-red-300 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row items-center text-center sm:text-left gap-2 sm:gap-4 cursor-pointer group">
           <div className="p-2 sm:p-3 bg-red-50 text-red-600 rounded-lg sm:rounded-xl group-hover:scale-110 transition-transform shrink-0">
             <TrendingDown className="h-5 w-5 sm:h-6 sm:w-6" />
           </div>
@@ -137,11 +123,7 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* AHORROS */}
-        <div 
-          onClick={() => setHistoryType('saving')}
-          className="bg-white border border-slate-100 hover:border-blue-300 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row items-center text-center sm:text-left gap-2 sm:gap-4 cursor-pointer group"
-        >
+        <div onClick={() => setHistoryType('saving')} className="bg-white border border-slate-100 hover:border-blue-300 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row items-center text-center sm:text-left gap-2 sm:gap-4 cursor-pointer group">
           <div className="p-2 sm:p-3 bg-blue-50 text-blue-600 rounded-lg sm:rounded-xl group-hover:scale-110 transition-transform shrink-0">
             <PiggyBank className="h-5 w-5 sm:h-6 sm:w-6" />
           </div>
@@ -154,21 +136,17 @@ export const Dashboard: React.FC = () => {
 
       {/* LISTADO DE ÚLTIMOS MOVIMIENTOS */}
       <div>
-        {/* ENCABEZADO CON CONTROLES DE VISTA */}
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-2">
             <h3 className="text-base sm:text-lg font-semibold text-slate-900">Últimos Movimientos</h3>
             <span className="text-xs text-slate-500 font-medium">({mainTransactions.length})</span>
           </div>
 
-          {/* Selector Lista / Cuadrícula */}
           <div className="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200/80">
             <button
               onClick={() => setViewMode('grid')}
               className={`p-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${
-                viewMode === 'grid'
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-900'
+                viewMode === 'grid' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'
               }`}
               title="Vista en Cuadrícula"
             >
@@ -177,9 +155,7 @@ export const Dashboard: React.FC = () => {
             <button
               onClick={() => setViewMode('list')}
               className={`p-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${
-                viewMode === 'list'
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-900'
+                viewMode === 'list' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'
               }`}
               title="Vista en Lista"
             >
@@ -193,16 +169,16 @@ export const Dashboard: React.FC = () => {
             <p className="text-slate-500 text-sm">Aún no tienes movimientos registrados. ¡Crea el primero!</p>
           </div>
         ) : (
-          /* Renderizado dinámico: Se ajustó a grid-cols-1 en móvil para evitar que se aplasten las tarjetas */
+          /* AQUÍ ESTÁ LA CORRECCIÓN: Volvemos a grid-cols-2 en celular para que el cambio sea visible */
           <div
             className={
               viewMode === 'grid'
-                ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4"
+                ? "grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4" 
                 : "flex flex-col gap-3"
             }
           >
             {mainTransactions.map((tx) => (
-              <div key={tx.id} className="w-full">
+              <div key={tx.id} className="min-w-0 w-full">
                 <TransactionCard 
                   transaction={tx}
                   allTransactions={transactions}
@@ -217,37 +193,9 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* MODALES */}
-      <TransactionDetailsModal
-        isOpen={!!selectedTx && !isEditing}
-        transaction={selectedTx}
-        allTransactions={transactions}
-        onClose={() => setSelectedTx(null)}
-        onUpdate={fetchTransactions}
-        onEdit={() => setIsEditing(true)}
-      />
-
-      <TransactionModal
-        isOpen={isCreateModalOpen || isEditing}
-        initialData={isEditing ? selectedTx : null}
-        onClose={() => {
-          setIsCreateModalOpen(false);
-          setIsEditing(false);
-          setSelectedTx(null);
-        }}
-        onSuccess={() => {
-          fetchTransactions();
-          setIsCreateModalOpen(false);
-          setIsEditing(false);
-          setSelectedTx(null);
-        }}
-      />
-
-      <HistoryModal
-        isOpen={!!historyType}
-        type={historyType}
-        onClose={() => setHistoryType(null)}
-        transactions={transactions}
-      />
+      <TransactionDetailsModal isOpen={!!selectedTx && !isEditing} transaction={selectedTx} allTransactions={transactions} onClose={() => setSelectedTx(null)} onUpdate={fetchTransactions} onEdit={() => setIsEditing(true)} />
+      <TransactionModal isOpen={isCreateModalOpen || isEditing} initialData={isEditing ? selectedTx : null} onClose={() => { setIsCreateModalOpen(false); setIsEditing(false); setSelectedTx(null); }} onSuccess={() => { fetchTransactions(); setIsCreateModalOpen(false); setIsEditing(false); setSelectedTx(null); }} />
+      <HistoryModal isOpen={!!historyType} type={historyType} onClose={() => setHistoryType(null)} transactions={transactions} />
     </div>
   );
 };
