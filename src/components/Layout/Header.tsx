@@ -9,6 +9,7 @@ import { CreateSharedModal } from '../CreateSharedModal';
 import { JoinSharedModal } from '../JoinSharedModal';
 import { SharedSavingsListModal } from '../SharedSavingsListModal';
 import type { User } from '../../types/auth';
+import toast from 'react-hot-toast';
 
 interface HeaderProps {
   user: User | null;
@@ -126,6 +127,7 @@ export const Header: React.FC<HeaderProps> = ({ user, onUserUpdated }) => {
 
             {/* Notificaciones */}
             <button 
+              onClick={() => toast('No jala ahorita, paciencia 😅', { icon: '🛠️' })}
               title="Notificaciones"
               className="relative p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
             >
