@@ -83,13 +83,13 @@ export const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-5 sm:space-y-8 animate-in fade-in duration-500">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-5 sm:py-8 space-y-6 sm:space-y-8 animate-in fade-in duration-500">
       
       {/* SECCIÓN SUPERIOR: BALANCE & BOTÓN DE ACCIÓN */}
-      <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 bg-slate-900 text-white rounded-2xl p-4 sm:p-6 shadow-lg">
-        <div className="text-center sm:text-left">
-          <p className="text-slate-400 text-xs sm:text-sm font-medium mb-0.5 sm:mb-1">Balance Disponible</p>
-          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">${balance.toFixed(2)}</h2>
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-900 text-white rounded-2xl p-5 sm:p-6 shadow-lg">
+        <div className="text-center sm:text-left w-full sm:w-auto">
+          <p className="text-slate-400 text-xs sm:text-sm font-medium mb-1">Balance Disponible</p>
+          <h2 className="text-4xl sm:text-4xl font-bold tracking-tight break-words">${balance.toFixed(2)}</h2>
         </div>
 
         <button
@@ -98,55 +98,56 @@ export const Dashboard: React.FC = () => {
             setIsEditing(false);
             setIsCreateModalOpen(true);
           }}
-          className="w-full md:w-auto px-4 py-2.5 sm:px-5 sm:py-3 bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] text-white rounded-xl font-semibold transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer text-sm sm:text-base"
+          className="w-full sm:w-auto px-5 py-3 bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] text-white rounded-xl font-semibold transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer text-sm sm:text-base"
         >
-          <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
+          <Plus className="h-5 w-5" />
           <span>Nuevo Movimiento</span>
         </button>
       </div>
 
-      {/* TARJETAS DE RESUMEN (3 columnas en móvil) */}
+      {/* TARJETAS DE RESUMEN (Optimizadas para que no corten números grandes) */}
       <div className="grid grid-cols-3 gap-2 sm:gap-4">
         
         {/* INGRESOS */}
         <div 
           onClick={() => setHistoryType('income')}
-          className="bg-white border border-slate-100 hover:border-emerald-300 rounded-xl sm:rounded-2xl p-2.5 sm:p-5 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row items-center text-center sm:text-left gap-1.5 sm:gap-4 cursor-pointer group min-w-0"
+          className="bg-white border border-slate-100 hover:border-emerald-300 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row items-center text-center sm:text-left gap-2 sm:gap-4 cursor-pointer group"
         >
           <div className="p-2 sm:p-3 bg-emerald-50 text-emerald-600 rounded-lg sm:rounded-xl group-hover:scale-110 transition-transform shrink-0">
-            <TrendingUp className="h-4 w-4 sm:h-6 sm:w-6" />
+            <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6" />
           </div>
-          <div className="min-w-0 w-full">
-            <p className="text-slate-500 text-[10px] sm:text-xs font-medium uppercase tracking-wider truncate">Ingresos</p>
-            <p className="text-xs sm:text-xl font-bold text-slate-900 truncate">${totals.income.toFixed(2)}</p>
+          <div className="w-full">
+            <p className="text-slate-500 text-[10px] sm:text-xs font-medium uppercase tracking-wider line-clamp-1">Ingresos</p>
+            {/* Se reemplaza truncate por break-words/text-wrap para que los números bajen de línea si no caben */}
+            <p className="text-sm sm:text-xl font-bold text-slate-900 break-words mt-0.5">${totals.income.toFixed(2)}</p>
           </div>
         </div>
 
         {/* DEUDA PENDIENTE */}
         <div 
           onClick={() => setHistoryType('expense')}
-          className="bg-white border border-slate-100 hover:border-red-300 rounded-xl sm:rounded-2xl p-2.5 sm:p-5 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row items-center text-center sm:text-left gap-1.5 sm:gap-4 cursor-pointer group min-w-0"
+          className="bg-white border border-slate-100 hover:border-red-300 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row items-center text-center sm:text-left gap-2 sm:gap-4 cursor-pointer group"
         >
           <div className="p-2 sm:p-3 bg-red-50 text-red-600 rounded-lg sm:rounded-xl group-hover:scale-110 transition-transform shrink-0">
-            <TrendingDown className="h-4 w-4 sm:h-6 sm:w-6" />
+            <TrendingDown className="h-5 w-5 sm:h-6 sm:w-6" />
           </div>
-          <div className="min-w-0 w-full">
-            <p className="text-slate-500 text-[10px] sm:text-xs font-medium uppercase tracking-wider truncate">Pendiente</p>
-            <p className="text-xs sm:text-xl font-bold text-slate-900 truncate">${totals.expense.toFixed(2)}</p>
+          <div className="w-full">
+            <p className="text-slate-500 text-[10px] sm:text-xs font-medium uppercase tracking-wider line-clamp-1">Pendiente</p>
+            <p className="text-sm sm:text-xl font-bold text-slate-900 break-words mt-0.5">${totals.expense.toFixed(2)}</p>
           </div>
         </div>
 
         {/* AHORROS */}
         <div 
           onClick={() => setHistoryType('saving')}
-          className="bg-white border border-slate-100 hover:border-blue-300 rounded-xl sm:rounded-2xl p-2.5 sm:p-5 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row items-center text-center sm:text-left gap-1.5 sm:gap-4 cursor-pointer group min-w-0"
+          className="bg-white border border-slate-100 hover:border-blue-300 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row items-center text-center sm:text-left gap-2 sm:gap-4 cursor-pointer group"
         >
           <div className="p-2 sm:p-3 bg-blue-50 text-blue-600 rounded-lg sm:rounded-xl group-hover:scale-110 transition-transform shrink-0">
-            <PiggyBank className="h-4 w-4 sm:h-6 sm:w-6" />
+            <PiggyBank className="h-5 w-5 sm:h-6 sm:w-6" />
           </div>
-          <div className="min-w-0 w-full">
-            <p className="text-slate-500 text-[10px] sm:text-xs font-medium uppercase tracking-wider truncate">Ahorros</p>
-            <p className="text-xs sm:text-xl font-bold text-slate-900 truncate">${totals.saving.toFixed(2)}</p>
+          <div className="w-full">
+            <p className="text-slate-500 text-[10px] sm:text-xs font-medium uppercase tracking-wider line-clamp-1">Ahorros</p>
+            <p className="text-sm sm:text-xl font-bold text-slate-900 break-words mt-0.5">${totals.saving.toFixed(2)}</p>
           </div>
         </div>
       </div>
@@ -154,14 +155,14 @@ export const Dashboard: React.FC = () => {
       {/* LISTADO DE ÚLTIMOS MOVIMIENTOS */}
       <div>
         {/* ENCABEZADO CON CONTROLES DE VISTA */}
-        <div className="flex justify-between items-center mb-3 sm:mb-4 px-1">
+        <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-2">
             <h3 className="text-base sm:text-lg font-semibold text-slate-900">Últimos Movimientos</h3>
-            <span className="text-[11px] sm:text-xs text-slate-500 font-medium">({mainTransactions.length})</span>
+            <span className="text-xs text-slate-500 font-medium">({mainTransactions.length})</span>
           </div>
 
           {/* Selector Lista / Cuadrícula */}
-          <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200/80">
+          <div className="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200/80">
             <button
               onClick={() => setViewMode('grid')}
               className={`p-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${
@@ -189,19 +190,19 @@ export const Dashboard: React.FC = () => {
         
         {mainTransactions.length === 0 ? (
           <div className="text-center py-10 sm:py-12 bg-white border border-slate-100 rounded-2xl border-dashed px-4">
-            <p className="text-slate-500 text-xs sm:text-sm">Aún no tienes movimientos registrados. ¡Crea el primero!</p>
+            <p className="text-slate-500 text-sm">Aún no tienes movimientos registrados. ¡Crea el primero!</p>
           </div>
         ) : (
-          /* Renderizado dinámico según el modo de vista */
+          /* Renderizado dinámico: Se ajustó a grid-cols-1 en móvil para evitar que se aplasten las tarjetas */
           <div
             className={
               viewMode === 'grid'
-                ? "grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4"
-                : "flex flex-col gap-2.5"
+                ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4"
+                : "flex flex-col gap-3"
             }
           >
             {mainTransactions.map((tx) => (
-              <div key={tx.id} className="min-w-0 w-full">
+              <div key={tx.id} className="w-full">
                 <TransactionCard 
                   transaction={tx}
                   allTransactions={transactions}
