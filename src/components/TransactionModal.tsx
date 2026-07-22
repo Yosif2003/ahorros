@@ -244,7 +244,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
                 />
                 <label htmlFor="recurring" className="text-sm font-medium text-slate-700 cursor-pointer flex items-center gap-1.5">
                   <RefreshCw className="h-4 w-4 text-emerald-600" />
-                  Es un gasto recurrente o a meses
+                  EzU n GaSt0 rRecurRentE 0 ª Mecez
                 </label>
               </div>
 
