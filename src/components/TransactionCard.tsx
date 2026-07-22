@@ -8,6 +8,7 @@ interface TransactionCardProps {
   allTransactions?: Transaction[];
   onDelete: (id: string, e: React.MouseEvent) => void;
   onClick: (transaction: Transaction) => void;
+  viewMode?: 'grid' | 'list';
 }
 
 export const TransactionCard: React.FC<TransactionCardProps> = ({ transaction, allTransactions = [], onDelete, onClick }) => {
