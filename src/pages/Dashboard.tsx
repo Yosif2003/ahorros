@@ -7,6 +7,7 @@ import { TransactionCard } from '../components/TransactionCard';
 import { TransactionModal } from '../components/TransactionModal';
 import { TransactionDetailsModal } from '../components/TransactionDetailModal';
 import { HistoryModal } from '../components/HistoryModal';
+import { BudgetWidget } from '../components/BudgetWidget'; // <-- Importamos el widget
 import toast from 'react-hot-toast';
 
 export const Dashboard: React.FC = () => {
@@ -48,7 +49,8 @@ export const Dashboard: React.FC = () => {
     try {
       await transactionService.deleteTransaction(id);
       toast.success('Movimiento eliminado');
-      fetchTransactions();
+      fetchTransactions(); // Recarga transacciones
+      window.dispatchEvent(new Event('transaction-updated')); // Dispara evento para que el BudgetWidget también se actualice
     } catch (error) {
       toast.error('No se pudo eliminar');
     }
@@ -79,7 +81,7 @@ export const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-5 sm:py-8 space-y-6 sm:space-y-8 animate-in fade-in duration-500">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 sm:py-8 space-y-6 sm:space-y-8 animate-in fade-in duration-500">
       
       {/* HEADER: BALANCE & BOTÓN */}
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-900 text-white rounded-2xl p-5 sm:p-6 shadow-lg">
@@ -134,62 +136,71 @@ export const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* LISTADO DE ÚLTIMOS MOVIMIENTOS */}
-      <div>
-        <div className="flex justify-between items-center mb-4">
-          <div className="flex items-center gap-2">
-            <h3 className="text-base sm:text-lg font-semibold text-slate-900">Últimos Movimientos</h3>
-            <span className="text-xs text-slate-500 font-medium">({mainTransactions.length})</span>
-          </div>
-
-          <div className="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200/80">
-            <button
-              onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${
-                viewMode === 'grid' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'
-              }`}
-              title="Vista en Cuadrícula"
-            >
-              <LayoutGrid className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => setViewMode('list')}
-              className={`p-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${
-                viewMode === 'list' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'
-              }`}
-              title="Vista en Lista"
-            >
-              <List className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
+      {/* CONTENIDO PRINCIPAL: MOVIMIENTOS Y PRESUPUESTOS (GRID DIVIDIDO) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {mainTransactions.length === 0 ? (
-          <div className="text-center py-10 sm:py-12 bg-white border border-slate-100 rounded-2xl border-dashed px-4">
-            <p className="text-slate-500 text-sm">Aún no tienes movimientos registrados. ¡Crea el primero!</p>
+        {/* COLUMNA IZQUIERDA: Listado de últimos movimientos */}
+        <div className="lg:col-span-2">
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center gap-2">
+              <h3 className="text-base sm:text-lg font-semibold text-slate-900">Últimos Movimientos</h3>
+              <span className="text-xs text-slate-500 font-medium">({mainTransactions.length})</span>
+            </div>
+
+            <div className="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200/80">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${
+                  viewMode === 'grid' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'
+                }`}
+                title="Vista en Cuadrícula"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${
+                  viewMode === 'list' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'
+                }`}
+                title="Vista en Lista"
+              >
+                <List className="h-4 w-4" />
+              </button>
+            </div>
           </div>
-        ) : (
-          /* AQUÍ ESTÁ LA CORRECCIÓN: Volvemos a grid-cols-2 en celular para que el cambio sea visible */
-          <div
-            className={
-              viewMode === 'grid'
-                ? "grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4" 
-                : "flex flex-col gap-3"
-            }
-          >
-            {mainTransactions.map((tx) => (
-              <div key={tx.id} className="min-w-0 w-full">
-                <TransactionCard 
-                  transaction={tx}
-                  allTransactions={transactions}
-                  onDelete={handleDelete} 
-                  onClick={(tx) => setSelectedTx(tx)}
-                  viewMode={viewMode}
-                />
-              </div>
-            ))}
-          </div>
-        )}
+          
+          {mainTransactions.length === 0 ? (
+            <div className="text-center py-10 sm:py-12 bg-white border border-slate-100 rounded-2xl border-dashed px-4">
+              <p className="text-slate-500 text-sm">Aún no tienes movimientos registrados. ¡Crea el primero!</p>
+            </div>
+          ) : (
+            <div
+              className={
+                viewMode === 'grid'
+                  ? "grid grid-cols-2 gap-2.5 sm:gap-4" 
+                  : "flex flex-col gap-3"
+              }
+            >
+              {mainTransactions.map((tx) => (
+                <div key={tx.id} className="min-w-0 w-full">
+                  <TransactionCard 
+                    transaction={tx}
+                    allTransactions={transactions}
+                    onDelete={handleDelete} 
+                    onClick={(tx) => setSelectedTx(tx)}
+                    viewMode={viewMode}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* COLUMNA DERECHA: Widget de Presupuestos */}
+        <div className="lg:col-span-1 space-y-6">
+          <BudgetWidget />
+        </div>
+
       </div>
 
       {/* MODALES */}

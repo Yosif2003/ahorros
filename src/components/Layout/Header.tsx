@@ -1,7 +1,7 @@
 // src/components/Layout/Header.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LogOut, Flame, Wallet, User as UserIcon, Bell, Plus, Users, Search, Target, Menu, X, Check, Info } from 'lucide-react';
+import { LogOut, Flame, Wallet, User as UserIcon, Bell, Plus, Users, Search, Target, Menu, X, Check } from 'lucide-react';
 import { authService } from '../../features/auth/authService';
 import { ProfileModal } from '../ProfileModal';
 import { TransactionModal } from '../TransactionModal';
