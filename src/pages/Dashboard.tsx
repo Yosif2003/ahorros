@@ -12,7 +12,10 @@ import toast from 'react-hot-toast';
 
 export const Dashboard: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+
+  // === CARGA INICIAL vs REFRESCO SILENCIOSO ===
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // === ESTADO PARA MODO DE VISTA ===
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -23,37 +26,59 @@ export const Dashboard: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [historyType, setHistoryType] = useState<TransactionType | null>(null);
 
-  const fetchTransactions = async () => {
+  const fetchTransactions = async (opts?: { silent?: boolean }) => {
     try {
-      setIsLoading(true);
+      if (opts?.silent) {
+        setIsRefreshing(true);
+      } else {
+        setIsInitialLoading(true);
+      }
       const data = await transactionService.getTransactions();
       const sortedData = data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       setTransactions(sortedData);
     } catch (error) {
       toast.error('Error al cargar los movimientos');
     } finally {
-      setIsLoading(false);
+      setIsInitialLoading(false);
+      setIsRefreshing(false);
     }
   };
 
   useEffect(() => {
-    fetchTransactions();
-    window.addEventListener('transaction-updated', fetchTransactions);
-    return () => window.removeEventListener('transaction-updated', fetchTransactions);
+    fetchTransactions(); // carga inicial (con spinner de pantalla completa)
+
+    // Recargas disparadas por otros componentes (ej. BudgetWidget) -> silenciosas
+    const handleUpdate = () => fetchTransactions({ silent: true });
+    window.addEventListener('transaction-updated', handleUpdate);
+    return () => window.removeEventListener('transaction-updated', handleUpdate);
   }, []);
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!window.confirm('¿Seguro que deseas eliminar este movimiento?')) return;
-    
+
+    // --- Actualización optimista: quitamos el elemento de inmediato ---
+    const previousTransactions = transactions;
+    setTransactions(prev => prev.filter(tx => tx.id !== id));
+
     try {
       await transactionService.deleteTransaction(id);
       toast.success('Movimiento eliminado');
-      fetchTransactions(); // Recarga transacciones
-      window.dispatchEvent(new Event('transaction-updated')); // Dispara evento para que el BudgetWidget también se actualice
+      // Sincronizamos en segundo plano por si hay relaciones (linkedTo, paidAmount, etc.)
+      fetchTransactions({ silent: true });
+      window.dispatchEvent(new Event('transaction-updated'));
     } catch (error) {
+      // Si falla, revertimos al estado anterior
+      setTransactions(previousTransactions);
       toast.error('No se pudo eliminar');
     }
+  };
+
+  const handleCreateOrEditSuccess = () => {
+    fetchTransactions({ silent: true }); // no bloquea toda la pantalla
+    setIsCreateModalOpen(false);
+    setIsEditing(false);
+    setSelectedTx(null);
   };
 
   const totals = transactions.reduce(
@@ -72,7 +97,8 @@ export const Dashboard: React.FC = () => {
   const balance = totals.income + totals.saving - totals.expense;
   const mainTransactions = transactions.filter(tx => !tx.linkedTo);
 
-  if (isLoading) {
+  // Solo bloqueamos toda la pantalla en la carga inicial
+  if (isInitialLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh] px-4">
         <p className="text-slate-500 font-medium animate-pulse text-sm">Cargando tu información financiera...</p>
@@ -81,8 +107,15 @@ export const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 sm:py-8 space-y-6 sm:space-y-8 animate-in fade-in duration-500">
-      
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 sm:py-8 space-y-6 sm:space-y-8 animate-in fade-in duration-500 relative">
+
+      {/* Indicador discreto de refresco en segundo plano */}
+      {isRefreshing && (
+        <div className="fixed top-4 right-4 z-50 bg-slate-900 text-white text-xs px-3 py-1.5 rounded-full shadow-lg animate-pulse">
+          Actualizando...
+        </div>
+      )}
+
       {/* HEADER: BALANCE & BOTÓN */}
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-900 text-white rounded-2xl p-5 sm:p-6 shadow-lg">
         <div className="text-center sm:text-left w-full sm:w-auto">
@@ -138,7 +171,7 @@ export const Dashboard: React.FC = () => {
 
       {/* CONTENIDO PRINCIPAL: MOVIMIENTOS Y PRESUPUESTOS (GRID DIVIDIDO) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
+
         {/* COLUMNA IZQUIERDA: Listado de últimos movimientos */}
         <div className="lg:col-span-2">
           <div className="flex justify-between items-center mb-4">
@@ -168,7 +201,7 @@ export const Dashboard: React.FC = () => {
               </button>
             </div>
           </div>
-          
+
           {mainTransactions.length === 0 ? (
             <div className="text-center py-10 sm:py-12 bg-white border border-slate-100 rounded-2xl border-dashed px-4">
               <p className="text-slate-500 text-sm">Aún no tienes movimientos registrados. ¡Crea el primero!</p>
@@ -177,16 +210,16 @@ export const Dashboard: React.FC = () => {
             <div
               className={
                 viewMode === 'grid'
-                  ? "grid grid-cols-2 gap-2.5 sm:gap-4" 
+                  ? "grid grid-cols-2 gap-2.5 sm:gap-4"
                   : "flex flex-col gap-3"
               }
             >
               {mainTransactions.map((tx) => (
                 <div key={tx.id} className="min-w-0 w-full">
-                  <TransactionCard 
+                  <TransactionCard
                     transaction={tx}
                     allTransactions={transactions}
-                    onDelete={handleDelete} 
+                    onDelete={handleDelete}
                     onClick={(tx) => setSelectedTx(tx)}
                     viewMode={viewMode}
                   />
@@ -204,8 +237,20 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* MODALES */}
-      <TransactionDetailsModal isOpen={!!selectedTx && !isEditing} transaction={selectedTx} allTransactions={transactions} onClose={() => setSelectedTx(null)} onUpdate={fetchTransactions} onEdit={() => setIsEditing(true)} />
-      <TransactionModal isOpen={isCreateModalOpen || isEditing} initialData={isEditing ? selectedTx : null} onClose={() => { setIsCreateModalOpen(false); setIsEditing(false); setSelectedTx(null); }} onSuccess={() => { fetchTransactions(); setIsCreateModalOpen(false); setIsEditing(false); setSelectedTx(null); }} />
+      <TransactionDetailsModal
+        isOpen={!!selectedTx && !isEditing}
+        transaction={selectedTx}
+        allTransactions={transactions}
+        onClose={() => setSelectedTx(null)}
+        onUpdate={() => fetchTransactions({ silent: true })}
+        onEdit={() => setIsEditing(true)}
+      />
+      <TransactionModal
+        isOpen={isCreateModalOpen || isEditing}
+        initialData={isEditing ? selectedTx : null}
+        onClose={() => { setIsCreateModalOpen(false); setIsEditing(false); setSelectedTx(null); }}
+        onSuccess={handleCreateOrEditSuccess}
+      />
       <HistoryModal isOpen={!!historyType} type={historyType} onClose={() => setHistoryType(null)} transactions={transactions} />
     </div>
   );
