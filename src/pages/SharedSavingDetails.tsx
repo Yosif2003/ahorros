@@ -38,9 +38,9 @@ export const SharedSavingDetails: React.FC = () => {
     fetchSavingDetails();
   }, [code]);
 
-  // Verificar si el usuario ya es creador o ha aportado/se ha unido a la meta
-  const isOwner = saving?.creatorId._id === currentUser?.id;
-  const hasJoined = isOwner || saving?.contributions.some(c => c.userId._id === currentUser?.id);
+// Verificar si el usuario ya es creador o ha aportado/se ha unido a la meta
+  const isOwner = saving?.creatorId?._id === currentUser?.id;
+  const hasJoined = isOwner || saving?.contributions.some(c => c.userId?._id === currentUser?.id);
 
   const handleJoinWithoutContributing = async () => {
     if (!saving) return;

@@ -73,9 +73,9 @@ export const JoinSharedModal: React.FC<Props> = ({ isOpen, onClose }) => {
     onClose();
   };
 
-  // Verificamos si el usuario ya es creador o si ya ha aportado/se ha unido
-  const isOwner = saving?.creatorId._id === currentUser?.id;
-  const hasJoined = isOwner || saving?.contributions.some(c => c.userId._id === currentUser?.id);
+// Verificamos si el usuario ya es creador o si ya ha aportado/se ha unido
+  const isOwner = saving?.creatorId?._id === currentUser?.id;
+  const hasJoined = isOwner || saving?.contributions.some(c => c.userId?._id === currentUser?.id);
   const progress = saving ? Math.min((saving.currentAmount / saving.goalAmount) * 100, 100) : 0;
 
   return (
