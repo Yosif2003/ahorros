@@ -20,7 +20,6 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({
 }) => {
   const isIncome = transaction.type === 'income';
   const isExpense = transaction.type === 'expense';
-
   const paidAmount = transaction.paidAmount || 0;
   const remaining = transaction.amount - paidAmount;
   const isFullyPaid = isExpense && remaining === 0;
@@ -28,14 +27,10 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({
   // Lógica para ingresos con deudas vinculadas y abonos
   const linkedExpenses = allTransactions.filter(tx => tx.linkedTo === transaction.id);
   const hasLinkedExpenses = isIncome && linkedExpenses.length > 0;
-
   const linkedExpensesTotal = linkedExpenses.reduce((sum, exp) => sum + exp.amount, 0);
   const linkedExpensesPaid = linkedExpenses.reduce((sum, exp) => sum + (exp.paidAmount || 0), 0);
-
-  // La deuda que realmente falta por pagar
+  
   const linkedExpensesRemaining = linkedExpensesTotal - linkedExpensesPaid;
-
-  // El balance es el monto inicial menos la deuda restante (los abonos suman al balance)
   const currentBalance = transaction.amount - linkedExpensesRemaining;
 
   const icon = isIncome ? <TrendingUp className="h-5 w-5" /> :
@@ -48,6 +43,7 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({
 
   const mainLabel = isExpense && paidAmount > 0 ? 'Pendiente' : (hasLinkedExpenses ? 'Balance Actual' : 'Monto');
   const mainAmount = hasLinkedExpenses ? currentBalance : (isExpense ? remaining : transaction.amount);
+
   const mainAmountColor = isIncome ? 'text-emerald-600' :
     isFullyPaid ? 'text-emerald-600' :
     isExpense ? 'text-slate-900' :
@@ -94,7 +90,6 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({
   );
 
   // ===================== VISTA DE LISTA =====================
-  // Fila horizontal compacta: icono + categoría/fecha a la izquierda, monto a la derecha.
   if (viewMode === 'list') {
     return (
       <div
@@ -106,10 +101,10 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({
         <div className={`p-2.5 rounded-xl shrink-0 ${iconColorClasses}`}>
           {icon}
         </div>
-
         <div className="min-w-0 flex-1">
+          {/* CORRECCIÓN: Renderizar el nombre del movimiento */}
           <h4 className="font-semibold text-slate-900 capitalize truncate flex items-center gap-1.5 flex-wrap">
-            {transaction.category}
+            {transaction.name || transaction.category}
             {badges}
           </h4>
           <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-0.5">
@@ -117,7 +112,6 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({
             <span>{new Date(transaction.date).toLocaleDateString()}</span>
           </div>
         </div>
-
         <div className="flex flex-col items-end shrink-0 gap-0.5 text-right">
           <span className="text-xs font-medium text-slate-400">{mainLabel}</span>
           <span className={`font-bold text-lg ${mainAmountColor}`}>
@@ -125,7 +119,6 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({
           </span>
           {extraInfo}
         </div>
-
         <button
           onClick={(e) => onDelete(transaction.id, e)}
           className="shrink-0 p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg opacity-100 lg:opacity-0 group-hover:opacity-100 transition-all"
@@ -138,8 +131,6 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({
   }
 
   // ===================== VISTA DE CUADRÍCULA =====================
-  // Todo apilado en columna: nada se comprime lado a lado, así ningún dato queda oculto
-  // aunque la tarjeta sea angosta (2-3 columnas).
   return (
     <div
       onClick={() => onClick(transaction)}
@@ -159,10 +150,10 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({
         <div className={`p-3 rounded-xl shrink-0 ${iconColorClasses}`}>
           {icon}
         </div>
-
         <div className="min-w-0 flex-1">
+          {/* CORRECCIÓN: Renderizar el nombre del movimiento */}
           <h4 className="font-semibold text-slate-900 capitalize break-words flex items-center gap-1.5 flex-wrap">
-            {transaction.category}
+            {transaction.name || transaction.category}
           </h4>
           <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-1">
             <Calendar className="h-3 w-3" />
@@ -175,7 +166,6 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({
           )}
         </div>
       </div>
-
       <div className="border-t border-slate-50 pt-3 flex flex-col gap-2">
         <div className="flex flex-col">
           <span className="text-xs font-medium text-slate-400">{mainLabel}</span>
