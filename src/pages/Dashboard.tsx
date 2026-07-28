@@ -7,20 +7,18 @@ import { TransactionCard } from '../components/TransactionCard';
 import { TransactionModal } from '../components/TransactionModal';
 import { TransactionDetailsModal } from '../components/TransactionDetailModal';
 import { HistoryModal } from '../components/HistoryModal';
-import { BudgetWidget } from '../components/BudgetWidget'; // <-- Importamos el widget
+import { BudgetWidget } from '../components/BudgetWidget';
 import toast from 'react-hot-toast';
 
 export const Dashboard: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-
-  // === CARGA INICIAL vs REFRESCO SILENCIOSO ===
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-
-  // === ESTADO PARA MODO DE VISTA ===
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  
+  // NUEVO: Estado para el filtro de transacciones
+  const [filterType, setFilterType] = useState<'all' | 'income' | 'expense' | 'saving'>('all');
 
-  // === ESTADOS DE MODALES ===
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -45,9 +43,7 @@ export const Dashboard: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchTransactions(); // carga inicial (con spinner de pantalla completa)
-
-    // Recargas disparadas por otros componentes (ej. BudgetWidget) -> silenciosas
+    fetchTransactions();
     const handleUpdate = () => fetchTransactions({ silent: true });
     window.addEventListener('transaction-updated', handleUpdate);
     return () => window.removeEventListener('transaction-updated', handleUpdate);
@@ -57,25 +53,22 @@ export const Dashboard: React.FC = () => {
     e.stopPropagation();
     if (!window.confirm('¿Seguro que deseas eliminar este movimiento?')) return;
 
-    // --- Actualización optimista: quitamos el elemento de inmediato ---
     const previousTransactions = transactions;
     setTransactions(prev => prev.filter(tx => tx.id !== id));
 
     try {
       await transactionService.deleteTransaction(id);
       toast.success('Movimiento eliminado');
-      // Sincronizamos en segundo plano por si hay relaciones (linkedTo, paidAmount, etc.)
       fetchTransactions({ silent: true });
       window.dispatchEvent(new Event('transaction-updated'));
     } catch (error) {
-      // Si falla, revertimos al estado anterior
       setTransactions(previousTransactions);
       toast.error('No se pudo eliminar');
     }
   };
 
   const handleCreateOrEditSuccess = () => {
-    fetchTransactions({ silent: true }); // no bloquea toda la pantalla
+    fetchTransactions({ silent: true });
     setIsCreateModalOpen(false);
     setIsEditing(false);
     setSelectedTx(null);
@@ -96,8 +89,12 @@ export const Dashboard: React.FC = () => {
 
   const balance = totals.income + totals.saving - totals.expense;
   const mainTransactions = transactions.filter(tx => !tx.linkedTo);
+  
+  // NUEVO: Filtrar las transacciones principales según el tipo seleccionado
+  const displayedTransactions = mainTransactions.filter(tx =>
+    filterType === 'all' ? true : tx.type === filterType
+  );
 
-  // Solo bloqueamos toda la pantalla en la carga inicial
   if (isInitialLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh] px-4">
@@ -108,8 +105,6 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 sm:py-8 space-y-6 sm:space-y-8 animate-in fade-in duration-500 relative">
-
-      {/* Indicador discreto de refresco en segundo plano */}
       {isRefreshing && (
         <div className="fixed top-4 right-4 z-50 bg-slate-900 text-white text-xs px-3 py-1.5 rounded-full shadow-lg animate-pulse">
           Actualizando...
@@ -122,7 +117,6 @@ export const Dashboard: React.FC = () => {
           <p className="text-slate-400 text-xs sm:text-sm font-medium mb-1">Balance Disponible</p>
           <h2 className="text-4xl sm:text-4xl font-bold tracking-tight break-words">${balance.toFixed(2)}</h2>
         </div>
-
         <button
           onClick={() => {
             setSelectedTx(null);
@@ -169,42 +163,83 @@ export const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* CONTENIDO PRINCIPAL: MOVIMIENTOS Y PRESUPUESTOS (GRID DIVIDIDO) */}
+      {/* CONTENIDO PRINCIPAL: MOVIMIENTOS Y PRESUPUESTOS */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
+        
         {/* COLUMNA IZQUIERDA: Listado de últimos movimientos */}
         <div className="lg:col-span-2">
-          <div className="flex justify-between items-center mb-4">
+          
+          {/* NUEVO: Contenedor con Título, Filtros y Botones de vista */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+            
             <div className="flex items-center gap-2">
               <h3 className="text-base sm:text-lg font-semibold text-slate-900">Últimos Movimientos</h3>
-              <span className="text-xs text-slate-500 font-medium">({mainTransactions.length})</span>
+              <span className="text-xs text-slate-500 font-medium">({displayedTransactions.length})</span>
             </div>
 
-            <div className="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200/80">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${
-                  viewMode === 'grid' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'
-                }`}
-                title="Vista en Cuadrícula"
-              >
-                <LayoutGrid className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`p-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${
-                  viewMode === 'list' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'
-                }`}
-                title="Vista en Lista"
-              >
-                <List className="h-4 w-4" />
-              </button>
+            <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0 hide-scrollbar">
+              
+              {/* Filtros */}
+              <div className="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200/80 shrink-0">
+                <button
+                  onClick={() => setFilterType('all')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${filterType === 'all' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
+                >
+                  Todos
+                </button>
+                <button
+                  onClick={() => setFilterType('expense')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${filterType === 'expense' ? 'bg-white text-red-600 shadow-sm' : 'text-slate-500 hover:text-red-600'}`}
+                >
+                  Gastos
+                </button>
+                <button
+                  onClick={() => setFilterType('income')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${filterType === 'income' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-emerald-600'}`}
+                >
+                  Ingresos
+                </button>
+                <button
+                  onClick={() => setFilterType('saving')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${filterType === 'saving' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-blue-600'}`}
+                >
+                  Ahorros
+                </button>
+              </div>
+
+              <div className="hidden sm:block w-px h-6 bg-slate-200 shrink-0 mx-1"></div>
+
+              {/* Botones de Vista (Lista / Cuadrícula) */}
+              <div className="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200/80 shrink-0">
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`p-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${
+                    viewMode === 'grid' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'
+                  }`}
+                  title="Vista en Cuadrícula"
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`p-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${
+                    viewMode === 'list' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'
+                  }`}
+                  title="Vista en Lista"
+                >
+                  <List className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           </div>
 
-          {mainTransactions.length === 0 ? (
+          {displayedTransactions.length === 0 ? (
             <div className="text-center py-10 sm:py-12 bg-white border border-slate-100 rounded-2xl border-dashed px-4">
-              <p className="text-slate-500 text-sm">Aún no tienes movimientos registrados. ¡Crea el primero!</p>
+              <p className="text-slate-500 text-sm">
+                {filterType !== 'all' 
+                  ? 'No hay movimientos para este filtro.' 
+                  : 'Aún no tienes movimientos registrados. ¡Crea el primero!'}
+              </p>
             </div>
           ) : (
             <div
@@ -214,7 +249,7 @@ export const Dashboard: React.FC = () => {
                   : "flex flex-col gap-3"
               }
             >
-              {mainTransactions.map((tx) => (
+              {displayedTransactions.map((tx) => (
                 <div key={tx.id} className="min-w-0 w-full">
                   <TransactionCard
                     transaction={tx}
@@ -233,7 +268,6 @@ export const Dashboard: React.FC = () => {
         <div className="lg:col-span-1 space-y-6">
           <BudgetWidget />
         </div>
-
       </div>
 
       {/* MODALES */}
