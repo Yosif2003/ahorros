@@ -1,6 +1,6 @@
 // src/components/TransactionCard.tsx
 import React from 'react';
-import { TrendingUp, TrendingDown, PiggyBank, Calendar, Trash2 } from 'lucide-react';
+import { TrendingUp, TrendingDown, PiggyBank, Calendar, Trash2, RefreshCw } from 'lucide-react';
 import type { Transaction } from '../types/transcations';
 
 interface TransactionCardProps {
@@ -29,7 +29,7 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({
   const hasLinkedExpenses = isIncome && linkedExpenses.length > 0;
   const linkedExpensesTotal = linkedExpenses.reduce((sum, exp) => sum + exp.amount, 0);
   const linkedExpensesPaid = linkedExpenses.reduce((sum, exp) => sum + (exp.paidAmount || 0), 0);
-  
+
   const linkedExpensesRemaining = linkedExpensesTotal - linkedExpensesPaid;
   const currentBalance = transaction.amount - linkedExpensesRemaining;
 
@@ -51,6 +51,12 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({
 
   const badges = (
     <>
+      {transaction.isRecurring && (
+        <span className="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full ring-1 ring-indigo-300 whitespace-nowrap flex items-center gap-1 w-fit">
+          <RefreshCw className="h-3 w-3" />
+          Recurrente
+        </span>
+      )}
       {isFullyPaid && (
         <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full ring-1 ring-emerald-300 whitespace-nowrap">
           Saldado
@@ -89,7 +95,7 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({
     </>
   );
 
-  // ===================== VISTA DE LISTA =====================
+  // VISTA DE LISTA
   if (viewMode === 'list') {
     return (
       <div
@@ -102,7 +108,6 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({
           {icon}
         </div>
         <div className="min-w-0 flex-1">
-          {/* CORRECCIÓN: Renderizar el nombre del movimiento */}
           <h4 className="font-semibold text-slate-900 capitalize truncate flex items-center gap-1.5 flex-wrap">
             {transaction.name || transaction.category}
             {badges}
@@ -130,7 +135,7 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({
     );
   }
 
-  // ===================== VISTA DE CUADRÍCULA =====================
+  // VISTA DE CUADRÍCULA
   return (
     <div
       onClick={() => onClick(transaction)}
@@ -151,7 +156,6 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({
           {icon}
         </div>
         <div className="min-w-0 flex-1">
-          {/* CORRECCIÓN: Renderizar el nombre del movimiento */}
           <h4 className="font-semibold text-slate-900 capitalize break-words flex items-center gap-1.5 flex-wrap">
             {transaction.name || transaction.category}
           </h4>
@@ -159,7 +163,8 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({
             <Calendar className="h-3 w-3" />
             <span>{new Date(transaction.date).toLocaleDateString()}</span>
           </div>
-          {(isFullyPaid || hasLinkedExpenses) && (
+          {/* AQUÍ SE HIZO LA CORRECCIÓN PARA ASEGURAR QUE SE MUESTRE LA ETIQUETA RECURRENTE */}
+          {(transaction.isRecurring || isFullyPaid || hasLinkedExpenses) && (
             <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
               {badges}
             </div>

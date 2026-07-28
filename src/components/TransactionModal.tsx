@@ -1,7 +1,8 @@
+// src/components/TransactionModal.tsx
 import React, { useState, useEffect } from 'react';
 import { X, TrendingDown, TrendingUp, PiggyBank, RefreshCw } from 'lucide-react';
 import { transactionService } from '../features/transactions/transactionService';
-import type { Transaction, TransactionType } from '../types/transcations';
+import type { Transaction, TransactionType, CreateTransactionPayload } from '../types/transcations';
 import toast from 'react-hot-toast';
 
 interface Props {
@@ -11,7 +12,6 @@ interface Props {
   initialData?: Transaction | null;
 }
 
-// Asegúrate de usar las MISMAS categorías que en BudgetModal.tsx
 const CATEGORIES = [
   'Alimentación', 'Transporte', 'Entretenimiento', 
   'Hogar', 'Salud', 'Educación', 'Ropa', 'Otros'
@@ -21,12 +21,14 @@ export const TransactionModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, 
   const [type, setType] = useState<TransactionType>('expense');
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  
-  // NUEVO: Separamos Nombre (texto libre) y Categoría (select)
   const [name, setName] = useState(''); 
   const [category, setCategory] = useState(CATEGORIES[0]);
   
+  // NUEVOS ESTADOS PARA GASTO RECURRENTE
   const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringType, setRecurringType] = useState<'subscription' | 'installment'>('subscription');
+  const [duration, setDuration] = useState('');
+  
   const [description, setDescription] = useState('');
   const [linkedTo, setLinkedTo] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -36,9 +38,11 @@ export const TransactionModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, 
       setType(initialData.type);
       setAmount(initialData.amount.toString());
       setDate(new Date(initialData.date).toISOString().split('T')[0]);
-      setName(initialData.name || ''); // Asegúrate de que 'name' exista en tu tipo Transaction
+      setName(initialData.name || ''); 
       setCategory(initialData.category || CATEGORIES[0]);
       setIsRecurring(initialData.isRecurring || false);
+      setRecurringType(initialData.recurringType === 'installment' ? 'installment' : 'subscription');
+      setDuration(initialData.duration ? initialData.duration.toString() : '');
       setDescription(initialData.description || '');
       setLinkedTo(initialData.linkedTo || '');
     } else {
@@ -53,6 +57,8 @@ export const TransactionModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, 
     setName('');
     setCategory(CATEGORIES[0]);
     setIsRecurring(false);
+    setRecurringType('subscription');
+    setDuration('');
     setDescription('');
     setLinkedTo('');
   };
@@ -63,25 +69,33 @@ export const TransactionModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, 
     e.preventDefault();
     if (!amount || isNaN(Number(amount))) return toast.error('Monto inválido');
     if (!name.trim()) return toast.error('Ingresa un nombre para el movimiento');
+    
+    if (isRecurring && recurringType === 'installment' && (!duration || Number(duration) <= 0)) {
+      return toast.error('Ingresa los meses de duración para el pago a plazos');
+    }
 
     setIsLoading(true);
     try {
-      const payload = {
+      // AQUÍ ENVIAMOS TODOS LOS DATOS CORRECTOS AL BACKEND
+      // Le decimos a TypeScript exactamente qué tipo de objeto estamos creando
+      const payload: CreateTransactionPayload = {
         type,
         amount: Number(amount),
         date,
-        name, // Enviamos el texto libre
-        category, // Enviamos la categoría estandarizada
+        name,
+        category,
         isRecurring: type === 'expense' ? isRecurring : false,
+        // Hacemos un "casting" (as) para asegurar que TS no lo convierta en un string genérico
+        recurringType: (type === 'expense' && isRecurring ? recurringType : 'none') as 'subscription' | 'installment' | 'none',
+        duration: (type === 'expense' && isRecurring && recurringType === 'installment') ? Number(duration) : null,
         description,
         linkedTo: linkedTo || undefined
       };
 
-      // ✅ La forma correcta (usando .id):
-if (initialData) {
-  await transactionService.updateTransaction(initialData.id, payload);
-  toast.success('Movimiento actualizado');
-} else {
+      if (initialData) {
+        await transactionService.updateTransaction(initialData.id, payload);
+        toast.success('Movimiento actualizado');
+      } else {
         await transactionService.createTransaction(payload);
         toast.success('Movimiento guardado');
       }
@@ -109,149 +123,115 @@ if (initialData) {
 
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           
-          {/* TIPO DE TRANSACCIÓN */}
           <div className="grid grid-cols-3 gap-3">
-            <button
-              type="button"
-              onClick={() => setType('expense')}
-              className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${
-                type === 'expense' ? 'border-red-500 bg-red-50 text-red-600' : 'border-slate-200 text-slate-500 hover:bg-slate-50'
-              }`}
-            >
+            <button type="button" onClick={() => setType('expense')} className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${type === 'expense' ? 'border-red-500 bg-red-50 text-red-600' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
               <TrendingDown className="h-5 w-5 mb-1" />
               <span className="text-sm font-medium">Gasto</span>
             </button>
-            <button
-              type="button"
-              onClick={() => setType('income')}
-              className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${
-                type === 'income' ? 'border-emerald-500 bg-emerald-50 text-emerald-600' : 'border-slate-200 text-slate-500 hover:bg-slate-50'
-              }`}
-            >
+            <button type="button" onClick={() => setType('income')} className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${type === 'income' ? 'border-emerald-500 bg-emerald-50 text-emerald-600' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
               <TrendingUp className="h-5 w-5 mb-1" />
               <span className="text-sm font-medium">Ingreso</span>
             </button>
-            <button
-              type="button"
-              onClick={() => setType('saving')}
-              className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${
-                type === 'saving' ? 'border-blue-500 bg-blue-50 text-blue-600' : 'border-slate-200 text-slate-500 hover:bg-slate-50'
-              }`}
-            >
+            <button type="button" onClick={() => setType('saving')} className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${type === 'saving' ? 'border-blue-500 bg-blue-50 text-blue-600' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
               <PiggyBank className="h-5 w-5 mb-1" />
               <span className="text-sm font-medium">Ahorro</span>
             </button>
           </div>
 
-          {/* MONTO Y FECHA */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Monto</label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">$</span>
-                <input
-                  type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="0.00"
-                  className="w-full pl-7 pr-4 py-2 border border-slate-200 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
-                  min="0.01"
-                  step="0.01"
-                  required
-                />
+                <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" className="w-full pl-7 pr-4 py-2 border border-slate-200 rounded-lg focus:border-indigo-500 outline-none" min="0.01" step="0.01" required />
               </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Fecha Registro</label>
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
-                required
-              />
+              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:border-indigo-500 outline-none" required />
             </div>
           </div>
 
-          {/* NUEVO: NOMBRE DEL MOVIMIENTO */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Nombre</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Ej. Tacos del viernes, Recibo de luz..."
-              className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
-              required
-            />
+            <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej. Tacos del viernes, Recibo de luz..." className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:border-indigo-500 outline-none" required />
           </div>
 
-          {/* NUEVO: CATEGORÍA (SELECT) */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Categoría</label>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none bg-white"
-            >
+            <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:border-indigo-500 outline-none bg-white">
               {CATEGORIES.map(cat => (
                 <option key={cat} value={cat}>{cat}</option>
               ))}
             </select>
           </div>
 
-          {/* GASTO RECURRENTE (Solo si es Gasto) */}
+          {/* GASTO RECURRENTE (Con las opciones faltantes agregadas) */}
           {type === 'expense' && (
-            <label className="flex items-center gap-2 cursor-pointer group">
-              <input
-                type="checkbox"
-                checked={isRecurring}
-                onChange={(e) => setIsRecurring(e.target.checked)}
-                className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
-              />
-              <span className="flex items-center gap-1.5 text-sm font-medium text-slate-700 group-hover:text-slate-900">
-                <RefreshCw className="h-4 w-4 text-emerald-500" />
-                Gasto recurrente
-              </span>
-            </label>
+            <div className="space-y-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
+              <label className="flex items-center gap-2 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={isRecurring}
+                  onChange={(e) => setIsRecurring(e.target.checked)}
+                  className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
+                />
+                <span className="flex items-center gap-1.5 text-sm font-medium text-slate-700 group-hover:text-slate-900">
+                  <RefreshCw className="h-4 w-4 text-indigo-500" />
+                  Convertir en Gasto Recurrente automático
+                </span>
+              </label>
+
+              {isRecurring && (
+                <div className="pl-6 space-y-3 pt-2 border-t border-slate-200/60">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Tipo de recurrencia</label>
+                    <select
+                      value={recurringType}
+                      onChange={(e) => setRecurringType(e.target.value as 'subscription' | 'installment')}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-indigo-500 text-sm outline-none bg-white"
+                    >
+                      <option value="subscription">Suscripción (Mensual, sin límite)</option>
+                      <option value="installment">Pago a plazos (Límite de meses)</option>
+                    </select>
+                  </div>
+                  
+                  {recurringType === 'installment' && (
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Duración (Meses totales)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={duration}
+                        onChange={(e) => setDuration(e.target.value)}
+                        placeholder="Ej. 12"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-indigo-500 text-sm outline-none"
+                        required={recurringType === 'installment'}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           )}
 
-          {/* DESCRIPCIÓN */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Descripción (Opcional)</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Detalles adicionales..."
-              rows={2}
-              className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none resize-none"
-            />
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Detalles adicionales..." rows={2} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:border-indigo-500 outline-none resize-none" />
           </div>
 
-          {/* VINCULAR A */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Vincular a (Opcional)</label>
-            <select
-              value={linkedTo}
-              onChange={(e) => setLinkedTo(e.target.value)}
-              className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none bg-white"
-            >
+            <select value={linkedTo} onChange={(e) => setLinkedTo(e.target.value)} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:border-indigo-500 outline-none bg-white">
               <option value="">No vincular</option>
-              {/* Aquí mapearías los IDs de otras transacciones o metas si tu lógica lo requiere */}
             </select>
           </div>
 
-          {/* BOTÓN SUBMIT */}
           <div className="pt-4 border-t border-slate-100">
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full py-3 bg-slate-900 text-white rounded-xl font-medium hover:bg-slate-800 transition-colors disabled:opacity-50"
-            >
+            <button type="submit" disabled={isLoading} className="w-full py-3 bg-slate-900 text-white rounded-xl font-medium hover:bg-slate-800 transition-colors disabled:opacity-50">
               {isLoading ? 'Guardando...' : 'Guardar Transacción'}
             </button>
           </div>
-
         </form>
       </div>
     </div>
