@@ -11,7 +11,7 @@ interface Props {
 
 const CATEGORIES = [
   'Alimentación', 'Transporte', 'Entretenimiento', 
-  'Hogar', 'Salud', 'Educación', 'Ropa', 'Otros'
+  'Hogar', 'Salud', 'Educación', 'Ropa', 'Otros', 'Transporte'
 ];
 
 export const BudgetModal: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
