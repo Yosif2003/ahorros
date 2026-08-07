@@ -24,7 +24,6 @@ export const TransactionModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, 
   const [name, setName] = useState(''); 
   const [category, setCategory] = useState(CATEGORIES[0]);
   
-  // NUEVOS ESTADOS PARA GASTO RECURRENTE
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurringType, setRecurringType] = useState<'subscription' | 'installment'>('subscription');
   const [duration, setDuration] = useState('');
@@ -32,8 +31,26 @@ export const TransactionModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, 
   const [description, setDescription] = useState('');
   const [linkedTo, setLinkedTo] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  
+  // NUEVO: Estado para guardar los ingresos disponibles para vincular
+  const [availableIncomes, setAvailableIncomes] = useState<Transaction[]>([]);
 
   useEffect(() => {
+    // NUEVO: Cargar los ingresos disponibles cuando se abre el modal
+    if (isOpen) {
+      const fetchIncomes = async () => {
+        try {
+          // Asegúrate de que getTransactions() exista en tu transactionService
+          const transactions = await transactionService.getTransactions();
+          const incomes = transactions.filter((t: Transaction) => t.type === 'income');
+          setAvailableIncomes(incomes);
+        } catch (error) {
+          console.error('Error al cargar transacciones para vincular:', error);
+        }
+      };
+      fetchIncomes();
+    }
+
     if (initialData) {
       setType(initialData.type);
       setAmount(initialData.amount.toString());
@@ -76,8 +93,6 @@ export const TransactionModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, 
 
     setIsLoading(true);
     try {
-      // AQUÍ ENVIAMOS TODOS LOS DATOS CORRECTOS AL BACKEND
-      // Le decimos a TypeScript exactamente qué tipo de objeto estamos creando
       const payload: CreateTransactionPayload = {
         type,
         amount: Number(amount),
@@ -85,7 +100,6 @@ export const TransactionModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, 
         name,
         category,
         isRecurring: type === 'expense' ? isRecurring : false,
-        // Hacemos un "casting" (as) para asegurar que TS no lo convierta en un string genérico
         recurringType: (type === 'expense' && isRecurring ? recurringType : 'none') as 'subscription' | 'installment' | 'none',
         duration: (type === 'expense' && isRecurring && recurringType === 'installment') ? Number(duration) : null,
         description,
@@ -111,7 +125,6 @@ export const TransactionModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, 
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 max-h-[90vh] overflow-y-auto">
         
-        {/* HEADER */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 sticky top-0 bg-white z-10">
           <h2 className="text-lg font-semibold text-slate-900">
             {initialData ? 'Editar Transacción' : 'Nueva Transacción'}
@@ -166,7 +179,6 @@ export const TransactionModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, 
             </select>
           </div>
 
-          {/* GASTO RECURRENTE (Con las opciones faltantes agregadas) */}
           {type === 'expense' && (
             <div className="space-y-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
               <label className="flex items-center gap-2 cursor-pointer group">
@@ -220,10 +232,16 @@ export const TransactionModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, 
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Detalles adicionales..." rows={2} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:border-indigo-500 outline-none resize-none" />
           </div>
 
+          {/* CORRECCIÓN: Renderizado dinámico de los ingresos */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Vincular a (Opcional)</label>
             <select value={linkedTo} onChange={(e) => setLinkedTo(e.target.value)} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:border-indigo-500 outline-none bg-white">
-              <option value="">No vincular</option>
+              <option value="">✓ No vincular</option>
+              {availableIncomes.map((income) => (
+                <option key={income.id} value={income.id}>
+                  {income.name} - ${income.amount}
+                </option>
+              ))}
             </select>
           </div>
 

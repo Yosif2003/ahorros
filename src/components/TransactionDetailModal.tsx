@@ -68,7 +68,7 @@ const LinkedExpenseItem: React.FC<{
     <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
       <div className="flex justify-between items-start">
         <div>
-          <p className="font-semibold text-slate-900 capitalize text-sm">{expense.category}</p>
+          <p className="font-semibold text-slate-900 capitalize text-sm">{expense.name}</p>
           {expense.description && (
             <p className="text-xs text-slate-500 mt-0.5">{expense.description}</p>
           )}
